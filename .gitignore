@@ -1,0 +1,9 @@
+# Ignore everything at repository root
+/*
+
+# Keep this ignore file
+!/.gitignore
+
+# Keep only these top-level folders
+!/Alex/
+!/code/
