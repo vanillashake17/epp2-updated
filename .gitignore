@@ -7,3 +7,17 @@
 # Keep only these top-level folders
 !/Alex/
 !/code/
+
+# Exclude Python caches at any level
+**/__pycache__/
+**/_pycache_/
+
+# Exclude virtual environments at any level
+**/env/
+**/venv/
+
+# Exclude nested repo backup
+**/.git.nested-backup/
+
+# Exclude log files
+*.log
