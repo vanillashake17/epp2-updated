@@ -19,5 +19,8 @@
 # Exclude nested repo backup
 **/.git.nested-backup/
 
+# Exclude egg-info build artifacts
+**/*.egg-info/
+
 # Exclude log files
 *.log
