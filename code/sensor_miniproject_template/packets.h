@@ -14,40 +14,35 @@
 // TPacket protocol
 // =============================================================
 
-typedef enum
-{
-    PACKET_TYPE_COMMAND = 0,
-    PACKET_TYPE_RESPONSE = 1,
-    PACKET_TYPE_MESSAGE = 2,
+typedef enum {
+  PACKET_TYPE_COMMAND = 0,
+  PACKET_TYPE_RESPONSE = 1,
+  PACKET_TYPE_MESSAGE = 2,
 } TPacketType;
 
-typedef enum
-{
-    COMMAND_ESTOP = 0,
-    COMMAND_COLOR = 1,
+typedef enum {
+  COMMAND_ESTOP = 0,
+  COMMAND_COLOR = 1,
+  COMMAND_MOVE = 2,
 } TCommandType;
 
-typedef enum
-{
-    RESP_OK = 0,
-    RESP_STATUS = 1,
-    RESP_COLOR = 2,
+typedef enum {
+  RESP_OK = 0,
+  RESP_STATUS = 1,
+  RESP_COLOR = 2,
 } TResponseType;
 
-typedef enum
-{
-    STATE_RUNNING = 0,
-    STATE_STOPPED = 1,
+typedef enum {
+  STATE_RUNNING = 0,
+  STATE_STOPPED = 1,
 } TState;
 
-
-typedef struct
-{
-    uint8_t packetType;
-    uint8_t command;
-    uint8_t dummy[2];
-    char data[32];
-    uint32_t params[16];
+typedef struct {
+  uint8_t packetType;
+  uint8_t command;
+  uint8_t dummy[2];
+  char data[32];
+  uint32_t params[16];
 } TPacket;
 
 // =============================================================

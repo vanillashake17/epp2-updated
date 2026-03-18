@@ -60,6 +60,7 @@ PACKET_TYPE_MESSAGE  = 2
 COMMAND_ESTOP  = 0
 # TODO (Activity 2): define your own command type for the color sensor here.
 COMMAND_COLOR  = 1
+COMMAND_MOVE   = 2
 
 RESP_OK     = 0
 RESP_STATUS = 1
@@ -285,6 +286,27 @@ def handleLidarCommand():
 # COMMAND-LINE INTERFACE
 # ----------------------------------------------------------------
 
+_motor_speed = 200   # current speed (0-255)
+SPEED_STEP   = 25    # how much +/- changes the speed
+
+
+def handleMovementCommand(direction):
+    """Send a COMMAND_MOVE with the direction char in data and speed in params[0]."""
+    if isEstopActive():
+        print("System stopped. Cannot drive motors.")
+        return
+
+    labels = {'w': 'FORWARD', 's': 'BACKWARD', 'a': 'LEFT (CCW)', 'd': 'RIGHT (CW)'}
+    print(f"Sending {labels.get(direction, direction)} at speed {_motor_speed}...")
+    sendCommand(COMMAND_MOVE, data=direction.encode(), params=[_motor_speed] + [0] * 15)
+
+
+def handleSpeedChange(delta):
+    """Adjust motor speed by delta, clamped to 0-255."""
+    global _motor_speed
+    _motor_speed = max(0, min(255, _motor_speed + delta))
+    print(f"Motor speed set to {_motor_speed}")
+
 def handleUserInput(line):
 
     if line == 'e':
@@ -299,14 +321,28 @@ def handleUserInput(line):
 
     elif line == 'l':
         handleLidarCommand()
-    
+
+    elif line in ('w', 's', 'a', 'd'):
+        handleMovementCommand(line)
+
+    elif line == '+':
+        handleSpeedChange(SPEED_STEP)
+
+    elif line == '-':
+        handleSpeedChange(-SPEED_STEP)
+
     else:
-        print(f"Unknown input: '{line}'. Valid: e, c, p, l")
+        print(f"Unknown input: '{line}'. Valid: e, c, p, l, w, a, s, d, +, -")
 
 
 def runCommandInterface():
 
-    print("Sensor interface ready. Type e / c / p / l and press Enter.")
+    print("Sensor interface ready. Commands:")
+    print("  e = E-Stop    c = Color sensor")
+    print("  p = Camera    l = LiDAR scan")
+    print("  w = Forward   s = Backward")
+    print("  a = Turn left d = Turn right")
+    print("  +/- = Speed up/down  (current: 200)")
     print("Press Ctrl+C to exit.\n")
 
     while True:
