@@ -1,2 +1,0 @@
-0000000000000000000000000000000000000000 864be5c169627e84dc70e184a3a92592be7cdf5c shau <shauushee@gmail.com> 1773592883 +0800	commit (initial): inital commit
-864be5c169627e84dc70e184a3a92592be7cdf5c 25ccab0f699a4a05182515d2412fcc7ce7be7fa5 shau <shauushee@gmail.com> 1773593276 +0800	commit: Ignore env/cache/setup logs and stop tracking
