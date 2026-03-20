@@ -143,9 +143,9 @@ static uint32_t measureChannel(uint8_t s2, uint8_t s3) {
   unsigned long start = _timerTicks;
 
   while ((_timerTicks - start) < 1000) {
-    if (PINA & SENSOR_OUT) {
+    if (PINH & SENSOR_OUT) {
       count++;
-      while (PINA & SENSOR_OUT)
+      while (PINH & SENSOR_OUT)
         ;
     }
   }
@@ -327,13 +327,14 @@ void setup() {
 #endif
 
   // ----------- COLOR SENSOR PIN SETUP -----------
-  DDRA |= S0 | S1 | S2 | S3;  // outputs
-  DDRA &= ~SENSOR_OUT;         // input
+  DDRG |= S0;          // output
+  DDRE |= S1;          // output
+  DDRH |= S2 | S3;     // outputs
+  DDRH &= ~SENSOR_OUT; // input
   DDRD &= ~(1 << PD1); // input (button pin)
-  PORTD |= (1 << PD1); // enable internal pull-up (prevents floating pin spurious E-stop)
 
-  PORTA |= S0;          // S0 = HIGH
-  PORTA &= ~S1;         // S1 = LOW  (20% frequency scaling)
+  PORTG |= S0;
+  PORTE &= ~S1;
   setupTimer();
   startTimer();
   EICRA |= (1 << ISC10); // trigger on any logical change
