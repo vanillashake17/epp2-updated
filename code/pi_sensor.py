@@ -23,6 +23,14 @@ import sys
 import select
 
 # ----------------------------------------------------------------
+# FEATURE FLAGS — set to False if a component is not connected
+# ----------------------------------------------------------------
+
+CAMERA_ENABLED = False
+LIDAR_ENABLED  = False
+COLOR_ENABLED  = False
+
+# ----------------------------------------------------------------
 # SERIAL PORT SETUP
 # ----------------------------------------------------------------
 
@@ -231,6 +239,9 @@ def printPacket(pkt):
 # ----------------------------------------------------------------
 
 def handleColorCommand():
+    if not COLOR_ENABLED:
+        print("Color sensor not enabled.")
+        return
     if isEstopActive():
         print("System stopped. Cannot read color sensor.")
         return
@@ -244,19 +255,24 @@ def handleColorCommand():
 # ----------------------------------------------------------------
 
 # TODO (Activity 3): import the camera library provided (alex_camera.py).
-import alex_camera
-_camera = alex_camera.cameraOpen()          # TODO (Activity 3): open the camera (cameraOpen()) before first use.
+if CAMERA_ENABLED:
+    import alex_camera
+    _camera = alex_camera.cameraOpen()
 _frames_remaining = 5   # frames remaining before further captures are refused
 
 
 def handleCameraCommand():
     """
     TODO (Activity 3): capture and display a greyscale frame.
-    
+
     Gate on E-Stop state and the remaining frame count.
     Use captureGreyscaleFrame() and renderGreyscaleFrame() from alex_camera.
     """
     global _frames_remaining
+
+    if not CAMERA_ENABLED:
+        print("Camera not enabled.")
+        return
 
     if not isEstopActive(): # estop not active, capture and display max 5 images.
         if _frames_remaining > 0:
@@ -274,9 +290,13 @@ def handleCameraCommand():
 # ACTIVITY 4: LIDAR
 # ----------------------------------------------------------------
 
-import lidar_example_cli_plot as lidar_plot
+if LIDAR_ENABLED:
+    import lidar_example_cli_plot as lidar_plot
 
 def handleLidarCommand():
+    if not LIDAR_ENABLED:
+        print("LiDAR not enabled.")
+        return
     if not isEstopActive():
         lidar_plot.plot_single_scan()
     else:
@@ -338,8 +358,8 @@ def handleUserInput(line):
 def runCommandInterface():
 
     print("Sensor interface ready. Commands:")
-    print("  e = E-Stop    c = Color sensor")
-    print("  p = Camera    l = LiDAR scan")
+    print(f"  e = E-Stop    c = Color sensor {'(disabled)' if not COLOR_ENABLED else ''}")
+    print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}    l = LiDAR scan {'(disabled)' if not LIDAR_ENABLED else ''}")
     print("  w = Forward   s = Backward")
     print("  a = Turn left d = Turn right")
     print("  +/- = Speed up/down  (current: 200)")
@@ -373,6 +393,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\nExiting.")
     finally:
-        alex_camera.cameraClose(_camera)
-        # TODO Disconnect Lidar if used (unsure)        
+        if CAMERA_ENABLED:
+            alex_camera.cameraClose(_camera)
+        # TODO Disconnect Lidar if used (unsure)
         closeSerial()
