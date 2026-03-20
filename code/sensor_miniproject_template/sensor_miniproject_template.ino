@@ -25,8 +25,8 @@
 #include <util/delay.h>
 
 // Motor durations for timed movement
-#define MOVE_DURATION_MS  500
-#define TURN_DURATION_MS  400
+#define MOVE_DURATION_MS  2000
+#define TURN_DURATION_MS  2000
 
 // Motor functions (forward, backward, ccw, cw, stop) are provided
 // by robotlib.ino which is compiled together with this sketch.
@@ -138,13 +138,14 @@ static uint32_t measureChannel(uint8_t s2, uint8_t s3) {
   else
     PORTH &= ~S3;
 
+
   uint32_t count = 0;
   unsigned long start = _timerTicks;
 
   while ((_timerTicks - start) < 1000) {
-    if (PINH & SENSOR_OUT) {
+    if (PINA & SENSOR_OUT) {
       count++;
-      while (PINH & SENSOR_OUT)
+      while (PINA & SENSOR_OUT)
         ;
     }
   }
@@ -160,16 +161,16 @@ static void readColorChannels(uint32_t *r, uint32_t *g, uint32_t *b) {
 
 static void setupTimer() {
   cli();
-  TCCR2A = (1 << WGM21);  // CTC mode
-  TCCR2B = 0;             // stop timer for now
-  TIMSK2 = (1 << OCIE2A); // enable compare match A interrupt
+  TCCR2A = (1 << WGM21);    // CTC mode
+  TCCR2B = 0;               // no clock yet
+  OCR2A = 199;
+  TIMSK2 = (1 << OCIE2A);
   TCNT2 = 0;
-  OCR2A = 199; // 100 us at 16 MHz, prescaler 8
   sei();
 }
 
 static void startTimer() {
-  TCCR2B = (1 << CS21); // prescaler 8
+  TCCR2B |= (1 << CS21);  // prescaler 8 → START TIMER
 }
 
 ISR(TIMER2_COMPA_vect) { _timerTicks++; }
@@ -253,6 +254,24 @@ static void handleCommand(const TPacket *cmd) {
 
     break;
   }
+
+  /*case COMMAND_MOVE: {
+  uint8_t speed = (uint8_t)cmd->params[0];
+  char dir = cmd->data[0];
+
+  switch (dir) {
+    case 'w': forward(speed); break;
+    case 's': backward(speed); break;
+    case 'a': ccw(speed); break;
+    case 'd': cw(speed); break;
+  }
+
+  sendResponse(RESP_OK, 0);
+  break;
+  }
+  }*/
+
+  
   case COMMAND_MOVE:
     {
       if (buttonState != STATE_RUNNING) {
@@ -294,6 +313,7 @@ static void handleCommand(const TPacket *cmd) {
   }
 }
 
+
 // =============================================================
 // Arduino setup() and loop()
 // =============================================================
@@ -307,14 +327,13 @@ void setup() {
 #endif
 
   // ----------- COLOR SENSOR PIN SETUP -----------
-  DDRG |= S0;          // output
-  DDRE |= S1;          // output
-  DDRH |= S2 | S3;     // outputs
-  DDRH &= ~SENSOR_OUT; // input
+  DDRA |= S0 | S1 | S2 | S3;  // outputs
+  DDRA &= ~SENSOR_OUT;         // input
   DDRD &= ~(1 << PD1); // input (button pin)
+  PORTD |= (1 << PD1); // enable internal pull-up (prevents floating pin spurious E-stop)
 
-  PORTG |= S0;
-  PORTE &= ~S1;
+  PORTA |= S0;          // S0 = HIGH
+  PORTA &= ~S1;         // S1 = LOW  (20% frequency scaling)
   setupTimer();
   startTimer();
   EICRA |= (1 << ISC10); // trigger on any logical change
