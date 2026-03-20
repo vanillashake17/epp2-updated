@@ -30,29 +30,31 @@ void move(int speed, int direction)
 
   switch(direction)
     {
-      case BACK:
+      case GO:
         motorFL.run(BACKWARD);
         motorFR.run(BACKWARD);
         motorBL.run(FORWARD);
         motorBR.run(FORWARD); 
       break;
-      case GO:
+      case BACK:
         motorFL.run(FORWARD);
         motorFR.run(FORWARD);
         motorBL.run(BACKWARD);
         motorBR.run(BACKWARD); 
       break;
       case CW:
-        motorFL.run(BACKWARD);
+        // Turn right: left wheels forward, right wheels backward
+        motorFL.run(FORWARD);
         motorFR.run(FORWARD);
         motorBL.run(FORWARD);
-        motorBR.run(BACKWARD); 
+        motorBR.run(FORWARD);
       break;
       case CCW:
-        motorFL.run(FORWARD);
+        // Turn left: left wheels backward, right wheels forward
+        motorFL.run(BACKWARD);
         motorFR.run(BACKWARD);
         motorBL.run(BACKWARD);
-        motorBR.run(FORWARD); 
+        motorBR.run(BACKWARD);
       break;
       case STOP:
       default:
