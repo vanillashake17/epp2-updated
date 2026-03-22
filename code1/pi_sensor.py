@@ -21,13 +21,14 @@ import serial
 import time
 import sys
 import select
+from second_terminal import relay
+from packets import *
 
 # ----------------------------------------------------------------
 # FEATURE FLAGS — set to False if a component is not connected
 # ----------------------------------------------------------------
 
 CAMERA_ENABLED = False
-LIDAR_ENABLED  = False
 COLOR_ENABLED  = False
 
 # ----------------------------------------------------------------
@@ -61,25 +62,6 @@ def closeSerial():
 # (must match sensor_miniproject_template.ino)
 # ----------------------------------------------------------------
 
-PACKET_TYPE_COMMAND  = 0
-PACKET_TYPE_RESPONSE = 1
-PACKET_TYPE_MESSAGE  = 2
-
-COMMAND_ESTOP  = 0
-# TODO (Activity 2): define your own command type for the color sensor here.
-COMMAND_COLOR  = 1
-COMMAND_MOVE   = 2
-
-RESP_OK     = 0
-RESP_STATUS = 1
-# TODO (Activity 2): define your own response type for the color sensor here.
-RESP_COLOR  = 2
-
-STATE_RUNNING = 0
-STATE_STOPPED = 1
-
-MAX_STR_LEN  = 32
-PARAMS_COUNT = 16
 
 TPACKET_SIZE = 1 + 1 + 2 + MAX_STR_LEN + (PARAMS_COUNT * 4)  # = 100
 TPACKET_FMT  = f'<BB2x{MAX_STR_LEN}s{PARAMS_COUNT}I'
@@ -286,21 +268,6 @@ def handleCameraCommand():
         print("E-Stop is active. Cannot capture camera frame.")
 
 
-# ----------------------------------------------------------------
-# ACTIVITY 4: LIDAR
-# ----------------------------------------------------------------
-
-if LIDAR_ENABLED:
-    import lidar_example_cli_plot as lidar_plot
-
-def handleLidarCommand():
-    if not LIDAR_ENABLED:
-        print("LiDAR not enabled.")
-        return
-    if not isEstopActive():
-        lidar_plot.plot_single_scan()
-    else:
-        print("E-Stop is active. Cannot perform LiDAR scan.")
 
 # ----------------------------------------------------------------
 # COMMAND-LINE INTERFACE
@@ -339,8 +306,6 @@ def handleUserInput(line):
     elif line == 'p':
         handleCameraCommand()
 
-    elif line == 'l':
-        handleLidarCommand()
 
     elif line and line[0] in ('w', 's', 'a', 'd'):
         parts = line.split()
@@ -373,7 +338,7 @@ def runCommandInterface():
 
     print("Sensor interface ready. Commands:")
     print(f"  e = E-Stop    c = Color sensor {'(disabled)' if not COLOR_ENABLED else ''}")
-    print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}    l = LiDAR scan {'(disabled)' if not LIDAR_ENABLED else ''}")
+    print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}")
     print("  w <ms> = Forward   s <ms> = Backward")
     print("  a <ms> = Turn left d <ms> = Turn right")
     print("  (duration in ms, default 2000. e.g. 'w 500')")
@@ -386,10 +351,13 @@ def runCommandInterface():
             pkt = receiveFrame()
             if pkt:
                 printPacket(pkt)
+                relay.onPacketReceived(packFrame(pkt['packetType'], pkt['command'],
+pkt['data'], pkt['params']))
 
         rlist, _, _ = select.select([sys.stdin], [], [], 0)
         if rlist:
             line = sys.stdin.readline().strip().lower()
+            relay.checkSecondTerminal(_ser)
             if not line:
                 time.sleep(0.05)
                 continue
@@ -404,6 +372,7 @@ def runCommandInterface():
 
 if __name__ == '__main__':
     openSerial()
+    relay.start()
     try:
         runCommandInterface()
     except KeyboardInterrupt:
@@ -412,4 +381,6 @@ if __name__ == '__main__':
         if CAMERA_ENABLED:
             alex_camera.cameraClose(_camera)
         # TODO Disconnect Lidar if used (unsure)
+        relay.shutdown()
         closeSerial()
+        
