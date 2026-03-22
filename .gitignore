@@ -7,6 +7,9 @@
 # Keep only these top-level folders
 !/Alex/
 !/code/
+!/code1/
+!/code2/
+
 
 # Exclude Python caches at any level
 **/__pycache__/
