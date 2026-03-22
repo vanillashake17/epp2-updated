@@ -355,6 +355,10 @@ def handleUserInput(line):
             duration_ms = 2000  # default
         handleMovementCommand(direction, duration_ms)
 
+    elif line == 'x':
+        print("Stopping robot...")
+        sendCommand(COMMAND_MOVE, data=b'x', params=[0, 0] + [0] * 14)
+
     elif line == '+':
         handleSpeedChange(SPEED_STEP)
 
@@ -362,7 +366,7 @@ def handleUserInput(line):
         handleSpeedChange(-SPEED_STEP)
 
     else:
-        print(f"Unknown input: '{line}'. Valid: e, c, p, l, w/s/a/d <ms>, +, -")
+        print(f"Unknown input: '{line}'. Valid: e, c, p, l, w/s/a/d <ms>, x, +, -")
 
 
 def runCommandInterface():
@@ -373,6 +377,7 @@ def runCommandInterface():
     print("  w <ms> = Forward   s <ms> = Backward")
     print("  a <ms> = Turn left d <ms> = Turn right")
     print("  (duration in ms, default 2000. e.g. 'w 500')")
+    print("  x = Stop robot")
     print("  +/- = Speed up/down  (current: 200)")
     print("Press Ctrl+C to exit.\n")
 

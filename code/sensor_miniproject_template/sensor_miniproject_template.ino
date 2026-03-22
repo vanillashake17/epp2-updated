@@ -284,31 +284,43 @@ static void handleCommand(const TPacket *cmd) {
       char dir = cmd->data[0];
 
       switch (dir) {
-        case 'w':
-          forward(speed);
-          delay(duration);
-          stop();
-          break;
-        case 's':
-          backward(speed);
-          delay(duration);
-          stop();
-          break;
-        case 'a':
-          ccw(speed);
-          delay(duration);
-          stop();
-          break;
-        case 'd':
-          cw(speed);
-          delay(duration);
-          stop();
-          break;
+        case 'w': forward(speed); break;
+        case 's': backward(speed); break;
+        case 'a': ccw(speed); break;
+        case 'd': cw(speed); break;
+        case 'x':
         default:
           stop();
+          sendResponse(RESP_OK, 0);
           break;
       }
-      sendResponse(RESP_OK, 0);
+
+      if (dir == 'w' || dir == 's' || dir == 'a' || dir == 'd') {
+        unsigned long start = millis();
+        bool interrupted = false;
+        while (millis() - start < duration) {
+          TPacket incoming;
+          if (receiveFrame(&incoming)) {
+            if (incoming.packetType == PACKET_TYPE_COMMAND &&
+                incoming.command == COMMAND_MOVE &&
+                incoming.data[0] == 'x') {
+              interrupted = true;
+              break;
+            }
+            if (incoming.packetType == PACKET_TYPE_COMMAND &&
+                incoming.command == COMMAND_ESTOP) {
+              interrupted = true;
+              break;
+            }
+          }
+          if (buttonState != STATE_RUNNING) {
+            interrupted = true;
+            break;
+          }
+        }
+        stop();
+        sendResponse(RESP_OK, interrupted ? 1 : 0);
+      }
       break;
     }
   }
