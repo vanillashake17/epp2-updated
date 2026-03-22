@@ -306,19 +306,19 @@ def handleLidarCommand():
 # COMMAND-LINE INTERFACE
 # ----------------------------------------------------------------
 
-_motor_speed = 200   # current speed (0-255)
+_motor_speed = 175   # current speed (0-255)
 SPEED_STEP   = 25    # how much +/- changes the speed
 
 
-def handleMovementCommand(direction):
-    """Send a COMMAND_MOVE with the direction char in data and speed in params[0]."""
+def handleMovementCommand(direction, duration_ms):
+    """Send a COMMAND_MOVE with direction in data, speed in params[0], duration in params[1]."""
     if isEstopActive():
         print("System stopped. Cannot drive motors.")
         return
 
     labels = {'w': 'FORWARD', 's': 'BACKWARD', 'a': 'LEFT (CCW)', 'd': 'RIGHT (CW)'}
-    print(f"Sending {labels.get(direction, direction)} at speed {_motor_speed}...")
-    sendCommand(COMMAND_MOVE, data=direction.encode(), params=[_motor_speed] + [0] * 15)
+    print(f"Sending {labels.get(direction, direction)} at speed {_motor_speed} for {duration_ms} ms...")
+    sendCommand(COMMAND_MOVE, data=direction.encode(), params=[_motor_speed, duration_ms] + [0] * 14)
 
 
 def handleSpeedChange(delta):
@@ -342,8 +342,18 @@ def handleUserInput(line):
     elif line == 'l':
         handleLidarCommand()
 
-    elif line in ('w', 's', 'a', 'd'):
-        handleMovementCommand(line)
+    elif line and line[0] in ('w', 's', 'a', 'd'):
+        parts = line.split()
+        direction = parts[0]
+        if len(parts) >= 2:
+            try:
+                duration_ms = int(parts[1])
+            except ValueError:
+                print(f"Invalid duration: '{parts[1]}'. Use e.g. 'w 500'")
+                return
+        else:
+            duration_ms = 2000  # default
+        handleMovementCommand(direction, duration_ms)
 
     elif line == '+':
         handleSpeedChange(SPEED_STEP)
@@ -352,7 +362,7 @@ def handleUserInput(line):
         handleSpeedChange(-SPEED_STEP)
 
     else:
-        print(f"Unknown input: '{line}'. Valid: e, c, p, l, w, a, s, d, +, -")
+        print(f"Unknown input: '{line}'. Valid: e, c, p, l, w/s/a/d <ms>, +, -")
 
 
 def runCommandInterface():
@@ -360,8 +370,9 @@ def runCommandInterface():
     print("Sensor interface ready. Commands:")
     print(f"  e = E-Stop    c = Color sensor {'(disabled)' if not COLOR_ENABLED else ''}")
     print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}    l = LiDAR scan {'(disabled)' if not LIDAR_ENABLED else ''}")
-    print("  w = Forward   s = Backward")
-    print("  a = Turn left d = Turn right")
+    print("  w <ms> = Forward   s <ms> = Backward")
+    print("  a <ms> = Turn left d <ms> = Turn right")
+    print("  (duration in ms, default 2000. e.g. 'w 500')")
     print("  +/- = Speed up/down  (current: 200)")
     print("Press Ctrl+C to exit.\n")
 

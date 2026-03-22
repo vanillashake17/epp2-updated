@@ -119,33 +119,33 @@ volatile unsigned long _lastTime = 0;
 
 // ---------------- COLOR SENSOR PINS ----------------
 
-#define S0 (1 << PG5)         // Arduino D4
-#define S1 (1 << PE3)         // Arduino D5
-#define S2 (1 << PH3)         // Arduino D6
-#define S3 (1 << PH4)         // Arduino D7
-#define SENSOR_OUT (1 << PH5) // Arduino D8
+#define S0 (1 << PA0)         // Arduino D22
+#define S1 (1 << PA1)         // Arduino D23
+#define S2 (1 << PA2)         // Arduino D24
+#define S3 (1 << PA3)         // Arduino D25
+#define SENSOR_OUT (1 << PA4) // Arduino D26
 
 // ---------------- SENSOR MEASUREMENT ----------------
 
 static uint32_t measureChannel(uint8_t s2, uint8_t s3) {
 
   if (s2)
-    PORTH |= S2;
+    PORTA |= S2;
   else
-    PORTH &= ~S2;
+    PORTA &= ~S2;
   if (s3)
-    PORTH |= S3;
+    PORTA |= S3;
   else
-    PORTH &= ~S3;
+    PORTA &= ~S3;
 
 
   uint32_t count = 0;
   unsigned long start = _timerTicks;
 
   while ((_timerTicks - start) < 1000) {
-    if (PINH & SENSOR_OUT) {
+    if (PINA & SENSOR_OUT) {
       count++;
-      while (PINH & SENSOR_OUT)
+      while (PINA & SENSOR_OUT)
         ;
     }
   }
@@ -280,27 +280,28 @@ static void handleCommand(const TPacket *cmd) {
       }
 
       uint8_t speed = (uint8_t)cmd->params[0];
+      uint32_t duration = cmd->params[1];
       char dir = cmd->data[0];
 
       switch (dir) {
         case 'w':
           forward(speed);
-          delay(MOVE_DURATION_MS);
+          delay(duration);
           stop();
           break;
         case 's':
           backward(speed);
-          delay(MOVE_DURATION_MS);
+          delay(duration);
           stop();
           break;
         case 'a':
           ccw(speed);
-          delay(TURN_DURATION_MS);
+          delay(duration);
           stop();
           break;
         case 'd':
           cw(speed);
-          delay(TURN_DURATION_MS);
+          delay(duration);
           stop();
           break;
         default:
@@ -327,14 +328,12 @@ void setup() {
 #endif
 
   // ----------- COLOR SENSOR PIN SETUP -----------
-  DDRG |= S0;          // output
-  DDRE |= S1;          // output
-  DDRH |= S2 | S3;     // outputs
-  DDRH &= ~SENSOR_OUT; // input
-  DDRD &= ~(1 << PD1); // input (button pin)
+  DDRA |= S0 | S1 | S2 | S3; // outputs
+  DDRA &= ~SENSOR_OUT;        // input
+  DDRD &= ~(1 << PD1);        // input (button pin)
 
-  PORTG |= S0;
-  PORTE &= ~S1;
+  PORTA |= S0;                // S0=HIGH, S1=LOW -> 20% frequency scaling
+  PORTA &= ~S1;
   setupTimer();
   startTimer();
   EICRA |= (1 << ISC10); // trigger on any logical change
