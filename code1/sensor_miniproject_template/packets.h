@@ -24,12 +24,14 @@ typedef enum {
   COMMAND_ESTOP = 0,
   COMMAND_COLOR = 1,
   COMMAND_MOVE = 2,
+  COMMAND_ARM = 3,
 } TCommandType;
 
 typedef enum {
   RESP_OK = 0,
   RESP_STATUS = 1,
   RESP_COLOR = 2,
+  RESP_ARM = 3,
 } TResponseType;
 
 typedef enum {

@@ -41,11 +41,15 @@ Usage
 Press Ctrl+C to exit.
 """
 
+import os
 import select
 import struct
 import sys
 import time
-import packets
+
+# Add parent directory (code1/) to path so we can import the shared packets module.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from packets import *
 
 # net_utils is imported with an absolute import because this script is designed
 # to be run directly (python3 second_terminal/second_terminal.py), which adds
@@ -132,6 +136,9 @@ def _printPacket(pkt):
             state         = pkt['params'][0]
             _estop_active = (state == STATE_STOPPED)
             print(f"[robot] Status: {'STOPPED' if _estop_active else 'RUNNING'}")
+        elif cmd == RESP_ARM:
+            print(f"[robot] Arm angles: B={pkt['params'][0]} S={pkt['params'][1]} "
+                  f"E={pkt['params'][2]} G={pkt['params'][3]}")
         else:
             print(f"[robot] Response: unknown command {cmd}")
         # Print any debug string embedded in the data field.
@@ -162,12 +169,28 @@ def _handleInput(line: str, client: TCPClient):
         sendTPacketFrame(client.sock, frame)
         print("[second_terminal] Sent: E-STOP")
 
+    elif len(line) == 4 and line[0] in 'bsegv' and line[1:].isdigit():
+        cmd_char = line[0].upper()
+        val = int(line[1:])
+        data = cmd_char.encode('ascii')
+        frame = _packFrame(PACKET_TYPE_COMMAND, COMMAND_ARM,
+                           data=data, params=[val])
+        sendTPacketFrame(client.sock, frame)
+        print(f"[second_terminal] Sent: ARM {cmd_char}{val:03d}")
+
+    elif line == 'h':
+        data = b'H'
+        frame = _packFrame(PACKET_TYPE_COMMAND, COMMAND_ARM, data=data)
+        sendTPacketFrame(client.sock, frame)
+        print("[second_terminal] Sent: ARM HOME")
+
     elif line == 'q':
         print("[second_terminal] Quitting.")
         raise KeyboardInterrupt
 
     else:
-        print(f"[second_terminal] Unknown: '{line}'.  Valid: e (E-Stop)  q (quit)")
+        print(f"[second_terminal] Unknown: '{line}'.  "
+              f"Valid: e (E-Stop)  b/s/e/g/vNNN (arm)  h (home arm)  q (quit)")
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +208,7 @@ def run():
         sys.exit(1)
 
     print("[second_terminal] Connected!")
-    print("[second_terminal] Commands:  e = E-Stop   q = quit")
+    print("[second_terminal] Commands:  e = E-Stop  b/s/e/g/vNNN = arm  h = home arm  q = quit")
     print("[second_terminal] Incoming robot packets will be printed below.\n")
 
     try:

@@ -200,6 +200,123 @@ ISR(INT1_vect) {
 }
 
 // =============================================================
+// Robot arm (Timer 5 servo driver)
+// =============================================================
+
+// servo pins on Port C (PC0-PC3)
+#define BASE_PIN 0
+#define SHLD_PIN 1
+#define ELBW_PIN 2
+#define GRIP_PIN 3
+
+// servo pulse range in microseconds
+#define MIN_PULSE 600
+#define MAX_PULSE 2400
+
+// empirically tested servo limits (degrees)
+#define BASE_MIN 0
+#define BASE_MAX 175
+#define SHLD_MIN 80
+#define SHLD_MAX 155
+#define ELBW_MIN 105
+#define ELBW_MAX 175
+#define GRIP_MIN 20
+#define GRIP_MAX 50
+
+// staggered checkpoints within the 20ms period (timer ticks)
+#define BASE_CHECKPOINT 0
+#define SHLD_CHECKPOINT 10000
+#define ELBW_CHECKPOINT 20000
+#define GRIP_CHECKPOINT 30000
+
+volatile int arm_pulse_widths[4];
+volatile int arm_stage = 0;
+
+int arm_current[4] = {90, 125, 90, 45};
+int arm_target[4]  = {90, 125, 90, 45};
+unsigned long arm_last_move[4] = {0, 0, 0, 0};
+int arm_step_delay = 10; // ms between 1-degree steps
+
+static int constrainAngle(int idx, int angle) {
+  switch (idx) {
+    case BASE_PIN: return constrain(angle, BASE_MIN, BASE_MAX);
+    case SHLD_PIN: return constrain(angle, SHLD_MIN, SHLD_MAX);
+    case ELBW_PIN: return constrain(angle, ELBW_MIN, ELBW_MAX);
+    case GRIP_PIN: return constrain(angle, GRIP_MIN, GRIP_MAX);
+    default:       return constrain(angle, 0, 180);
+  }
+}
+
+static int angleToPulse(int angle) {
+  int us = map(angle, 0, 180, MIN_PULSE, MAX_PULSE);
+  return us * 2; // timer ticks at prescaler 8 / 16 MHz = 0.5us per tick
+}
+
+static void homeArm() {
+  arm_target[0] = constrainAngle(0, 90);
+  arm_target[1] = constrainAngle(1, 125);
+  arm_target[2] = constrainAngle(2, 90);
+  arm_target[3] = constrainAngle(3, 45);
+}
+
+static void setupArmTimer() {
+  DDRC |= 0x0F;   // PC0-PC3 as outputs
+  PORTC &= ~0x0F;
+
+  for (int i = 0; i < 4; i++)
+    arm_pulse_widths[i] = angleToPulse(arm_current[i]);
+
+  cli();
+  TCCR5A = 0;
+  TCCR5B = 0;
+  TCNT5  = 0;
+  OCR5A  = 39999;           // 20ms cycle
+  OCR5B  = 0;
+  TCCR5B |= (1 << WGM52);  // CTC mode
+  TCCR5B |= (1 << CS51);   // prescaler 8
+  TIMSK5 |= (1 << OCIE5A) | (1 << OCIE5B);
+  sei();
+}
+
+// 20ms period restart
+ISR(TIMER5_COMPA_vect) {
+  arm_stage = 0;
+}
+
+// staggered servo pulses
+ISR(TIMER5_COMPB_vect) {
+  switch (arm_stage) {
+    case 0: PORTC |=  (1 << BASE_PIN); OCR5B += arm_pulse_widths[0]; break;
+    case 1: PORTC &= ~(1 << BASE_PIN); OCR5B  = SHLD_CHECKPOINT;    break;
+    case 2: PORTC |=  (1 << SHLD_PIN); OCR5B += arm_pulse_widths[1]; break;
+    case 3: PORTC &= ~(1 << SHLD_PIN); OCR5B  = ELBW_CHECKPOINT;    break;
+    case 4: PORTC |=  (1 << ELBW_PIN); OCR5B += arm_pulse_widths[2]; break;
+    case 5: PORTC &= ~(1 << ELBW_PIN); OCR5B  = GRIP_CHECKPOINT;    break;
+    case 6: PORTC |=  (1 << GRIP_PIN); OCR5B += arm_pulse_widths[3]; break;
+    case 7: PORTC &= ~(1 << GRIP_PIN); OCR5B  = BASE_CHECKPOINT; arm_stage = -1; break;
+  }
+  arm_stage++;
+}
+
+// step each servo 1 degree toward its target (called from loop)
+static void updateArmMovement() {
+  unsigned long now = millis();
+  for (int i = 0; i < 4; i++) {
+    if ((arm_current[i] != arm_target[i]) &&
+        (now - arm_last_move[i] >= (unsigned long)arm_step_delay)) {
+      if (arm_current[i] < arm_target[i]) arm_current[i]++;
+      else                                 arm_current[i]--;
+
+      int pw = angleToPulse(arm_current[i]);
+      cli();
+      arm_pulse_widths[i] = pw;
+      sei();
+      arm_last_move[i] = now;
+    }
+  }
+}
+
+// =============================================================
 // Command handler
 // =============================================================
 
@@ -323,6 +440,31 @@ static void handleCommand(const TPacket *cmd) {
       }
       break;
     }
+
+  case COMMAND_ARM: {
+    // data[0] = command char: B/S/E/G/V/H
+    // params[0] = angle or velocity value
+    char c = cmd->data[0];
+    int val = (int)cmd->params[0];
+
+    switch (c) {
+      case 'B': arm_target[BASE_PIN] = constrainAngle(BASE_PIN, val); break;
+      case 'S': arm_target[SHLD_PIN] = constrainAngle(SHLD_PIN, val); break;
+      case 'E': arm_target[ELBW_PIN] = constrainAngle(ELBW_PIN, val); break;
+      case 'G': arm_target[GRIP_PIN] = constrainAngle(GRIP_PIN, val); break;
+      case 'V': arm_step_delay = constrain(val, 1, 999); break;
+      case 'H': homeArm(); break;
+    }
+
+    TPacket pkt;
+    memset(&pkt, 0, sizeof(pkt));
+    pkt.packetType = PACKET_TYPE_RESPONSE;
+    pkt.command = RESP_ARM;
+    for (int i = 0; i < 4; i++)
+      pkt.params[i] = (uint32_t)arm_current[i];
+    sendFrame(&pkt);
+    break;
+  }
   }
 }
 
@@ -351,6 +493,8 @@ void setup() {
   EICRA |= (1 << ISC10); // trigger on any logical change
   EIMSK |= (1 << INT1);  // enable external interrupt 1
 
+  setupArmTimer();
+
   sei();
 }
 
@@ -368,4 +512,6 @@ void loop() {
   if (receiveFrame(&incoming)) {
     handleCommand(&incoming);
   }
+
+  updateArmMovement();
 }

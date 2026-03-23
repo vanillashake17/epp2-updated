@@ -354,10 +354,11 @@ def runCommandInterface():
                 relay.onPacketReceived(packFrame(pkt['packetType'], pkt['command'],
 pkt['data'], pkt['params']))
 
+        relay.checkSecondTerminal(_ser)
+
         rlist, _, _ = select.select([sys.stdin], [], [], 0)
         if rlist:
             line = sys.stdin.readline().strip().lower()
-            relay.checkSecondTerminal(_ser)
             if not line:
                 time.sleep(0.05)
                 continue

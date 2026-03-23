@@ -87,7 +87,7 @@ if ! command -v git &>/dev/null; then
 fi
 
 echo "Ensuring Python packages are available..."
-python3 -m pip install --upgrade pip setuptools wheel
+# python3 -m pip install --upgrade pip setuptools wheel
 
 if python3 -c "import breezyslam" &>/dev/null; then
     echo "BreezySLAM is already installed."

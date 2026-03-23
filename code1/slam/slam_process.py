@@ -114,6 +114,11 @@ def run_slam_process(pss: ProcessSharedState) -> None:
           Must be passed as an argument (not captured in a closure) so that
           multiprocessing can transfer the handles to the child process.
     """
+    # Ensure the slam/ directory is on the path so local imports work
+    # in the child process.
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
     # Import BreezySLAM here so import errors are reported cleanly.
     try:
         from breezyslam.algorithms import RMHC_SLAM
