@@ -114,10 +114,15 @@ def run_slam_process(pss: ProcessSharedState) -> None:
           Must be passed as an argument (not captured in a closure) so that
           multiprocessing can transfer the handles to the child process.
     """
-    # Ensure the slam/ directory is on the path so local imports work
+    # Ensure the slam/ directory and its parent (code1/) are on the path
+    # so local imports (lidar, settings) and project packages (pyrplidar) work
     # in the child process.
     import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    slam_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(slam_dir)
+    sys.path.insert(0, slam_dir)
+    if parent_dir not in sys.path:
+        sys.path.insert(1, parent_dir)
 
     # Import BreezySLAM here so import errors are reported cleanly.
     try:
@@ -131,8 +136,8 @@ def run_slam_process(pss: ProcessSharedState) -> None:
     # Import the LIDAR driver from the same directory.
     try:
         import lidar as lidar_driver
-    except ImportError:
-        pss.set_error('lidar.py not found in the slam/ directory')
+    except ImportError as e:
+        pss.set_error(f'lidar import failed: {e} (check pyrplidar is in code1/)')
         pss.stopped.value = True
         return
 
