@@ -55,13 +55,16 @@ fi
 echo "Activated: $VIRTUAL_ENV"
 echo ''
 
+# Use the venv's own python to avoid the system externally-managed check.
+VENV_PYTHON="$(pwd)/env/bin/python3"
+
 # ------------------------------------------------------------------
 # Install BreezySLAM
 # ------------------------------------------------------------------
 # BreezySLAM is a lightweight SLAM library with a C extension.
 # It is not reliably available on PyPI, so we install it from GitHub.
 
-if ! python3 -c "import distutils" &>/dev/null; then
+if ! "$VENV_PYTHON" -c "import distutils" &>/dev/null; then
     echo "distutils not found, installing python3-distutils..."
     if command -v sudo &>/dev/null; then
         sudo apt-get update
@@ -87,22 +90,22 @@ if ! command -v git &>/dev/null; then
 fi
 
 echo "Ensuring Python packages are available..."
-# python3 -m pip install --upgrade pip setuptools wheel
+"$VENV_PYTHON" -m pip install --upgrade pip setuptools wheel
 
-if python3 -c "import breezyslam" &>/dev/null; then
+if "$VENV_PYTHON" -c "import breezyslam" &>/dev/null; then
     echo "BreezySLAM is already installed."
 else
     echo "Installing BreezySLAM from GitHub..."
-    python3 -m pip install "git+https://github.com/simondlevy/BreezySLAM.git#subdirectory=python"
+    "$VENV_PYTHON" -m pip install "git+https://github.com/simondlevy/BreezySLAM.git#subdirectory=python"
     echo ''
     echo "BreezySLAM installed successfully."
 fi
 
-if python3 -c "import textual" &>/dev/null; then
+if "$VENV_PYTHON" -c "import textual" &>/dev/null; then
     echo "Textual is already installed."
 else
     echo "Installing Textual..."
-    python3 -m pip install textual
+    "$VENV_PYTHON" -m pip install textual
     echo ''
     echo "Textual installed successfully."
 fi
