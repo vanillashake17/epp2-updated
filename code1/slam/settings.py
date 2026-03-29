@@ -24,7 +24,7 @@ LIDAR_BAUD = 115200
 
 # Side length of the square occupancy map in pixels.
 # Larger values give finer spatial resolution but use more memory.
-MAP_SIZE_PIXELS = 1000
+MAP_SIZE_PIXELS = 500
 
 # Real-world area the map covers, in metres.
 # The map will span MAP_SIZE_METERS x MAP_SIZE_METERS metres.
@@ -32,7 +32,7 @@ MAP_SIZE_METERS = 4 #original value 8M
 
 # How aggressively new LIDAR scans update the map (1 = slow, 10 = fast).
 # Lower values produce smoother maps; higher values react faster to changes.
-MAP_QUALITY = 5
+MAP_QUALITY = 6
 
 # Maximum gap (in mm) that BreezySLAM treats as a continuous wall.
 HOLE_WIDTH_MM = 100
@@ -51,7 +51,7 @@ SCAN_RATE_HZ = 5
 DETECTION_ANGLE = 360
 
 # Readings beyond this distance (in mm) are treated as misses (no return).
-MAX_DISTANCE_MM = 12000
+MAX_DISTANCE_MM = 5000
 
 # ===========================================================================
 # LIDAR mounting offset
