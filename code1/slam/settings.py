@@ -24,7 +24,7 @@ LIDAR_BAUD = 115200
 
 # Side length of the square occupancy map in pixels.
 # Larger values give finer spatial resolution but use more memory.
-MAP_SIZE_PIXELS = 500
+MAP_SIZE_PIXELS = 1000
 
 # Real-world area the map covers, in metres.
 # The map will span MAP_SIZE_METERS x MAP_SIZE_METERS metres.
