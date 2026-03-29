@@ -202,6 +202,11 @@ def printPacket(pkt):
             b = pkt['params'][2]
             print(f"R: {r} Hz, G: {g} Hz, B: {b} Hz")
 
+        elif cmd == RESP_ARM:
+            labels = ['Base', 'Shoulder', 'Elbow', 'Gripper']
+            angles = [pkt['params'][i] for i in range(4)]
+            print("Arm: " + "  ".join(f"{l}={a}°" for l, a in zip(labels, angles)))
+
         else:
             print(f"Response: unknown command {cmd}")
 
@@ -240,7 +245,7 @@ def handleColorCommand():
 if CAMERA_ENABLED:
     import alex_camera
     _camera = alex_camera.cameraOpen()
-_frames_remaining = 5   # frames remaining before further captures are refused
+_frames_remaining = 10  # frames remaining before further captures are refused
 
 
 def handleCameraCommand():
@@ -294,6 +299,33 @@ def handleSpeedChange(delta):
     _motor_speed = max(0, min(255, _motor_speed + delta))
     print(f"Motor speed set to {_motor_speed}")
 
+
+def handleArmCommand(line):
+    """Parse and send arm commands: rb/rs/re/rg <angle>, rv <delay>, rh (home)."""
+    parts = line.split()
+    cmd_char = parts[0]
+    char_map = {'rb': 'B', 'rs': 'S', 're': 'E', 'rg': 'G', 'rv': 'V', 'rh': 'H'}
+    arm_char = char_map[cmd_char]
+
+    if arm_char == 'H':
+        sendCommand(COMMAND_ARM, data=b'H')
+        print("Homing arm...")
+        return
+
+    if len(parts) < 2:
+        print(f"Usage: {cmd_char} <value>")
+        return
+    try:
+        val = int(parts[1])
+    except ValueError:
+        print(f"Invalid value: '{parts[1]}'")
+        return
+
+    sendCommand(COMMAND_ARM, data=arm_char.encode(), params=[val] + [0] * 15)
+    label = {'B': 'Base', 'S': 'Shoulder', 'E': 'Elbow', 'G': 'Gripper', 'V': 'Speed'}
+    print(f"Arm {label[arm_char]} -> {val}")
+
+
 def handleUserInput(line):
 
     if line == 'e':
@@ -324,6 +356,9 @@ def handleUserInput(line):
         print("Stopping robot...")
         sendCommand(COMMAND_MOVE, data=b'x', params=[0, 0] + [0] * 14)
 
+    elif line.split()[0] in ('rb', 'rs', 're', 'rg', 'rv', 'rh'):
+        handleArmCommand(line)
+
     elif line == '+':
         handleSpeedChange(SPEED_STEP)
 
@@ -331,7 +366,7 @@ def handleUserInput(line):
         handleSpeedChange(-SPEED_STEP)
 
     else:
-        print(f"Unknown input: '{line}'. Valid: e, c, p, l, w/s/a/d <ms>, x, +, -")
+        print(f"Unknown input: '{line}'. Valid: e, c, p, w/s/a/d <ms>, x, +/-, rb/rs/re/rg/rv/rh")
 
 
 def runCommandInterface():
@@ -344,6 +379,9 @@ def runCommandInterface():
     print("  (duration in ms, default 2000. e.g. 'w 500')")
     print("  x = Stop robot")
     print("  +/- = Speed up/down  (current: 200)")
+    print("  rb <0-175> = Base   rs <80-155> = Shoulder")
+    print("  re <105-175> = Elbow  rg <20-50> = Gripper")
+    print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
 
     while True:
