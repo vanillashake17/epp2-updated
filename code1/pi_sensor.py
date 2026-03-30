@@ -21,6 +21,8 @@ import serial
 import time
 import sys
 import select
+import tty
+import termios
 from second_terminal import relay
 from packets import *
 
@@ -280,6 +282,7 @@ def handleCameraCommand():
 
 _motor_speed = 175   # current speed (0-255)
 SPEED_STEP   = 25    # how much +/- changes the speed
+RAW_MOVE_MS  = 100   # duration per keypress in raw drive mode
 
 
 def handleMovementCommand(direction, duration_ms):
@@ -369,6 +372,56 @@ def handleUserInput(line):
         print(f"Unknown input: '{line}'. Valid: e, c, p, w/s/a/d <ms>, x, +/-, rb/rs/re/rg/rv/rh")
 
 
+def _processSerial():
+    """Check for incoming serial packets and relay data."""
+    if _ser.in_waiting >= FRAME_SIZE:
+        pkt = receiveFrame()
+        if pkt:
+            printPacket(pkt)
+            relay.onPacketReceived(packFrame(pkt['packetType'], pkt['command'],
+pkt['data'], pkt['params']))
+    relay.checkSecondTerminal(_ser)
+
+
+def runRawDriveMode():
+    """Raw drive mode: WASD keys move instantly, no Enter required."""
+    print("\n-- RAW DRIVE MODE --")
+    print("  WASD = drive    +/- = speed    e = E-Stop    x = stop")
+    print("  Press 'm' to return to normal mode\n")
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd)
+        while True:
+            _processSerial()
+
+            rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
+            if not rlist:
+                continue
+
+            ch = sys.stdin.read(1).lower()
+
+            if ch == 'm':
+                print("\n-- NORMAL MODE --")
+                return
+
+            if ch in ('w', 'a', 's', 'd'):
+                handleMovementCommand(ch, RAW_MOVE_MS)
+            elif ch == 'x':
+                print("Stopping robot...")
+                sendCommand(COMMAND_MOVE, data=b'x', params=[0, 0] + [0] * 14)
+            elif ch == 'e':
+                print("Sending E-Stop command...")
+                sendCommand(COMMAND_ESTOP, data=b'This is a debug message')
+            elif ch == '+':
+                handleSpeedChange(SPEED_STEP)
+            elif ch == '-':
+                handleSpeedChange(-SPEED_STEP)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
 def runCommandInterface():
 
     print("Sensor interface ready. Commands:")
@@ -379,26 +432,23 @@ def runCommandInterface():
     print("  (duration in ms, default 2000. e.g. 'w 500')")
     print("  x = Stop robot")
     print("  +/- = Speed up/down  (current: 200)")
+    print("  m = Raw drive mode (WASD instant control)")
     print("  rb <0-175> = Base   rs <80-155> = Shoulder")
     print("  re <105-175> = Elbow  rg <20-50> = Gripper")
     print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
 
     while True:
-        if _ser.in_waiting >= FRAME_SIZE:
-            pkt = receiveFrame()
-            if pkt:
-                printPacket(pkt)
-                relay.onPacketReceived(packFrame(pkt['packetType'], pkt['command'],
-pkt['data'], pkt['params']))
-
-        relay.checkSecondTerminal(_ser)
+        _processSerial()
 
         rlist, _, _ = select.select([sys.stdin], [], [], 0)
         if rlist:
             line = sys.stdin.readline().strip().lower()
             if not line:
                 time.sleep(0.05)
+                continue
+            if line == 'm':
+                runRawDriveMode()
                 continue
             handleUserInput(line)
 
