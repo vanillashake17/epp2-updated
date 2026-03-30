@@ -43,6 +43,7 @@ Press Ctrl+C to exit.
 
 import os
 import select
+import ssl
 import struct
 import sys
 import time
@@ -64,6 +65,13 @@ from net_utils import TCPClient, sendTPacketFrame, recvTPacketFrame
 # Change PI_HOST to the Pi's IP address if you run this from a different machine.
 PI_HOST = 'localhost'
 PI_PORT = 65432
+
+# ---------------------------------------------------------------------------
+# TLS settings (must match relay.py)
+# ---------------------------------------------------------------------------
+TLS_ENABLED   = True
+TLS_CERT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             'certs', 'server.crt')
 
 
 # ---------------------------------------------------------------------------
@@ -198,8 +206,15 @@ def _handleInput(line: str, client: TCPClient):
 # ---------------------------------------------------------------------------
 
 def run():
-    client = TCPClient(host=PI_HOST, port=PI_PORT)
-    print(f"[second_terminal] Connecting to pi_sensor.py at {PI_HOST}:{PI_PORT}...")
+    ssl_context = None
+    if TLS_ENABLED:
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+        ssl_context.load_verify_locations(TLS_CERT_PATH)
+    client = TCPClient(host=PI_HOST, port=PI_PORT,
+                       ssl_context=ssl_context, server_hostname='mango')
+    print(f"[second_terminal] Connecting to pi_sensor.py at {PI_HOST}:{PI_PORT} "
+          f"({'TLS' if TLS_ENABLED else 'plain TCP'})...")
 
     if not client.connect(timeout=10.0):
         print("[second_terminal] Could not connect.")

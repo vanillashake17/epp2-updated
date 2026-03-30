@@ -28,8 +28,8 @@ from packets import *
 # FEATURE FLAGS — set to False if a component is not connected
 # ----------------------------------------------------------------
 
-CAMERA_ENABLED = False
-COLOR_ENABLED  = False
+CAMERA_ENABLED = True
+COLOR_ENABLED  = True
 
 # ----------------------------------------------------------------
 # SERIAL PORT SETUP

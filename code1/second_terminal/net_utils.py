@@ -17,6 +17,7 @@ recvTPacketFrame  - receive a raw TPacket frame
 
 import select as _select
 import socket
+import ssl as _ssl
 import struct
 
 
@@ -49,7 +50,16 @@ def _sendFramed(sock, data: bytes) -> bool:
     """
     try:
         header = struct.pack(_LEN_FMT, len(data))
-        sock.sendall(header + data)
+        msg = header + data
+        total_sent = 0
+        while total_sent < len(msg):
+            try:
+                sent = sock.send(msg[total_sent:])
+                total_sent += sent
+            except _ssl.SSLWantWriteError:
+                _select.select([], [sock], [], 0.1)
+            except _ssl.SSLWantReadError:
+                _select.select([sock], [], [], 0.1)
         return True
     except (OSError, BrokenPipeError) as err:
         print(f"[net_utils] send error: {err}")
@@ -84,6 +94,12 @@ def _recvExact(sock, n: int):
     while len(buf) < n:
         try:
             chunk = sock.recv(n - len(buf))
+        except _ssl.SSLWantReadError:
+            _select.select([sock], [], [], 0.1)
+            continue
+        except _ssl.SSLWantWriteError:
+            _select.select([], [sock], [], 0.1)
+            continue
         except (OSError, ConnectionResetError) as err:
             print(f"[net_utils] recv error: {err}")
             return None
