@@ -22,7 +22,11 @@ import os
 import socket
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_slam_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_slam_dir)
+sys.path.insert(0, _slam_dir)
+if _parent_dir not in sys.path:
+    sys.path.insert(1, _parent_dir)
 
 from settings import (
     LIDAR_OFFSET_DEG, MAX_DISTANCE_MM, SCAN_SIZE,
