@@ -69,7 +69,7 @@ MAX_DIST_MM = 12000
 
 # SLAM map dimensions.
 MAP_PIXELS = 500        # pixels per side of the square map
-MAP_METERS = 8          # real-world metres covered by the map
+MAP_METERS = 5          # real-world metres covered by the map
 MAP_MM = MAP_METERS * 1000
 
 # BreezySLAM quality parameter (1 = cautious, 10 = aggressive).
@@ -119,7 +119,7 @@ def _scan_to_xy(distances, angles):
     d, a = d[mask], a[mask]
     rad = np.radians((a + 90) % 360)
     d_m = d / 1000.0
-    return (d_m * np.cos(rad)).tolist(), (d_m * np.sin(rad)).tolist()
+    return d_m * np.cos(rad), d_m * np.sin(rad)
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +212,12 @@ def run(host: str, port: int = DEFAULT_PORT):
                 break
 
             # Process all complete JSON objects in the buffer.
+            # SLAM is updated for every scan, but display is only
+            # refreshed once after draining the buffer.
+            last_distances = None
+            last_angles = None
+            last_valid = 0
+
             while '\n' in buf:
                 line, buf = buf.split('\n', 1)
                 line = line.strip()
@@ -234,38 +240,39 @@ def run(host: str, port: int = DEFAULT_PORT):
                 elif prev_distances is not None:
                     slam.update(prev_distances, scan_angles_degrees=angles)
 
+                last_distances = distances
+                last_angles = angles
+                last_valid = valid
+
+            # -- Update display once per draw frame --------------------------
+            if last_distances is not None:
                 x_mm, y_mm, theta_deg = slam.getpos()
-                # Clamp pose to map bounds so the dot never flies off-screen.
                 x_mm = max(0.0, min(x_mm, float(MAP_MM)))
                 y_mm = max(0.0, min(y_mm, float(MAP_MM)))
 
                 slam.getmap(mapbytes)
-
-                # -- Update matplotlib ---------------------------------------
                 map_img.set_data(np.rot90(_map_to_grid(mapbytes), 3))
 
                 x_m = x_mm / 1000.0
                 y_m = y_mm / 1000.0
                 robot_dot.set_data([MAP_METERS - y_m], [x_m])
 
-                # Update heading arrow in-place.
-                theta_rad = math.radians(-theta_deg + 90)
-                arrow_len = 0.15  # metres
+                theta_rad = math.radians(theta_deg)
+                arrow_len = 0.15
                 robot_quiver.set_offsets([[MAP_METERS - y_m, x_m]])
                 robot_quiver.set_UVC(
                     [-arrow_len * math.sin(theta_rad)],
                     [arrow_len * math.cos(theta_rad)],
                 )
 
-                # Point cloud (robot-relative).
-                px, py = _scan_to_xy(distances, angles)
+                px, py = _scan_to_xy(last_distances, last_angles)
                 pts_plot.set_data(px, py)
                 pos_text.set_text(
-                    f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={valid}'
+                    f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={last_valid}'
                 )
 
-            # Draw once after draining all pending scans in the buffer.
-            fig.canvas.draw_idle()
+                fig.canvas.draw_idle()
+
             plt.pause(0.001)
 
     except KeyboardInterrupt:
