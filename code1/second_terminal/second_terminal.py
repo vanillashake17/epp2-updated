@@ -179,7 +179,7 @@ def _handleInput(line: str, client: TCPClient):
         sendTPacketFrame(client.sock, frame)
         print("[second_terminal] Sent: E-STOP")
 
-    elif len(line) == 4 and line[0] in 'bsegv' and line[1:].isdigit():
+    elif len(line) >= 2 and line[0] in 'bsegv' and line[1:].isdigit():
         cmd_char = line[0].upper()
         val = int(line[1:])
         data = cmd_char.encode('ascii')
