@@ -113,16 +113,13 @@ def _scan_to_xy(distances, angles):
     The scan is in robot-relative coordinates (robot at origin, forward = +y).
     Points at or beyond MAX_DIST_MM are discarded.
     """
-    xs, ys = [], []
-    for dist, ang in zip(distances, angles):
-        if dist <= 0 or dist >= MAX_DIST_MM:
-            continue
-        # Rotate so that angle 0 = robot forward = +y axis.
-        rad = math.radians((ang + 90) % 360)
-        d_m = dist / 1000.0
-        xs.append(-d_m * math.cos(rad))
-        ys.append( d_m * math.sin(rad))
-    return xs, ys
+    d = np.asarray(distances, dtype=np.float64)
+    a = np.asarray(angles,    dtype=np.float64)
+    mask = (d > 0) & (d < MAX_DIST_MM)
+    d, a = d[mask], a[mask]
+    rad = np.radians((a + 90) % 360)
+    d_m = d / 1000.0
+    return (-d_m * np.cos(rad)).tolist(), (d_m * np.sin(rad)).tolist()
 
 
 # ---------------------------------------------------------------------------
@@ -157,8 +154,11 @@ def run(host: str, port: int = DEFAULT_PORT):
         vmin=0, vmax=255,
     )
     robot_dot,  = ax_map.plot([], [], 'bo', markersize=8, label='robot')
-    # robot_arrow is stored in a one-element list so inner code can rebind it.
-    robot_arrow = [None]
+    # Quiver arrow for robot heading — updated in-place each frame.
+    robot_quiver = ax_map.quiver(
+        [0], [0], [0], [0.15],
+        color='green', scale=1, scale_units='xy', angles='xy',
+    )
 
     # Right subplot: LiDAR point cloud
     ax_pts.set_title('LiDAR Point Cloud')
@@ -226,7 +226,8 @@ def run(host: str, port: int = DEFAULT_PORT):
                 distances = scan['distances']
 
                 # -- SLAM update ---------------------------------------------
-                valid = sum(1 for d in distances if 0 < d < MAX_DIST_MM)
+                d_arr = np.asarray(distances, dtype=np.float64)
+                valid = int(np.count_nonzero((d_arr > 0) & (d_arr < MAX_DIST_MM)))
                 if valid >= MIN_VALID_POINTS:
                     slam.update(distances, scan_angles_degrees=angles)
                     prev_distances = list(distances)
@@ -247,20 +248,13 @@ def run(host: str, port: int = DEFAULT_PORT):
                 y_m = y_mm / 1000.0
                 robot_dot.set_data([x_m], [y_m])
 
-                # Redraw heading arrow.
-                if robot_arrow[0] is not None:
-                    try:
-                        robot_arrow[0].remove()
-                    except Exception:
-                        pass
+                # Update heading arrow in-place.
                 theta_rad = math.radians(-theta_deg + 90)
                 arrow_len = 0.15  # metres
-                robot_arrow[0] = ax_map.arrow(
-                    x_m, y_m,
-                    arrow_len * math.cos(theta_rad),
-                    arrow_len * math.sin(theta_rad),
-                    head_width=0.04, head_length=0.08,
-                    fc='green', ec='green',
+                robot_quiver.set_offsets([[x_m, y_m]])
+                robot_quiver.set_UVC(
+                    [arrow_len * math.cos(theta_rad)],
+                    [arrow_len * math.sin(theta_rad)],
                 )
 
                 # Point cloud (robot-relative).
@@ -270,8 +264,9 @@ def run(host: str, port: int = DEFAULT_PORT):
                     f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={valid}'
                 )
 
-                fig.canvas.draw_idle()
-                plt.pause(0.001)
+            # Draw once after draining all pending scans in the buffer.
+            fig.canvas.draw_idle()
+            plt.pause(0.001)
 
     except KeyboardInterrupt:
         print('\n[slam_client] Interrupted')
