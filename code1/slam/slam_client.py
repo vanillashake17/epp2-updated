@@ -119,7 +119,7 @@ def _scan_to_xy(distances, angles):
     d, a = d[mask], a[mask]
     rad = np.radians((a + 90) % 360)
     d_m = d / 1000.0
-    return (-d_m * np.cos(rad)).tolist(), (d_m * np.sin(rad)).tolist()
+    return (d_m * np.cos(rad)).tolist(), (d_m * np.sin(rad)).tolist()
 
 
 # ---------------------------------------------------------------------------
@@ -242,19 +242,19 @@ def run(host: str, port: int = DEFAULT_PORT):
                 slam.getmap(mapbytes)
 
                 # -- Update matplotlib ---------------------------------------
-                map_img.set_data(_map_to_grid(mapbytes))
+                map_img.set_data(np.rot90(_map_to_grid(mapbytes), 3))
 
                 x_m = x_mm / 1000.0
                 y_m = y_mm / 1000.0
-                robot_dot.set_data([x_m], [y_m])
+                robot_dot.set_data([MAP_METERS - y_m], [x_m])
 
                 # Update heading arrow in-place.
                 theta_rad = math.radians(-theta_deg + 90)
                 arrow_len = 0.15  # metres
-                robot_quiver.set_offsets([[x_m, y_m]])
+                robot_quiver.set_offsets([[MAP_METERS - y_m, x_m]])
                 robot_quiver.set_UVC(
+                    [-arrow_len * math.sin(theta_rad)],
                     [arrow_len * math.cos(theta_rad)],
-                    [arrow_len * math.sin(theta_rad)],
                 )
 
                 # Point cloud (robot-relative).

@@ -101,6 +101,8 @@ def _packFrame(packetType, command, data=b'', params=None):
     """Pack a TPacket into a 103-byte framed byte string."""
     if params is None:
         params = [0] * PARAMS_COUNT
+    else:
+        params = (params + [0] * PARAMS_COUNT)[:PARAMS_COUNT]
     data_padded  = (data + b'\x00' * MAX_STR_LEN)[:MAX_STR_LEN]
     packet_bytes = struct.pack(TPACKET_FMT, packetType, command,
                                data_padded, *params)
