@@ -36,12 +36,16 @@ else E-Stop inactive
   pi -> ard : sendCommand(COMMAND_MOVE, ...)
   activate ard
 
-  ard -> rl : forward/backward/cw/ccw(...)
-  activate rl
-  rl -> motors : setSpeed(...), run(...)
-  deactivate rl
+  alt buttonState != STATE_RUNNING
+    ard --> pi : TPacket(RESP_STATUS, STATE_STOPPED)
+  else buttonState == STATE_RUNNING
+    ard -> rl : forward/backward/cw/ccw(...)
+    activate rl
+    rl -> motors : setSpeed(...), run(...)
+    deactivate rl
 
-  ard --> pi : TPacket(RESP_OK)
+    ard --> pi : TPacket(RESP_OK)
+  end
   deactivate ard
 
   pi --> op : "Response: OK"
