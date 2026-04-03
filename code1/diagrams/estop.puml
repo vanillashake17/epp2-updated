@@ -1,0 +1,45 @@
+@startuml seq_estop
+skinparam backgroundColor white
+skinparam defaultFontName "Helvetica"
+skinparam sequenceArrowColor #444444
+skinparam sequenceArrowFontColor #666666
+skinparam sequenceLifeLineBorderColor #aaaaaa
+skinparam sequenceLifeLineBackgroundColor white
+skinparam participantBackgroundColor #e8e8e8
+skinparam participantBorderColor #888888
+skinparam participantFontColor #222222
+skinparam activationBarBackgroundColor #d0d0d0
+skinparam activationBarBorderColor #888888
+skinparam noteBackgroundColor #f0f0f0
+skinparam noteBorderColor #aaaaaa
+skinparam noteFontColor #333333
+hide footbox
+
+title E-Stop Command Flow
+
+participant ":second_terminal" as st
+participant ":relay" as relay
+participant ":pi_sensor" as pi
+participant ":Arduino" as ard
+
+st -> relay : COMMAND_ESTOP [TLS TCP]
+activate relay
+relay -> ard : forward frame [USB Serial]
+activate ard
+deactivate relay
+
+ard --> pi : TPacket(RESP_STATUS, STATE_STOPPED)
+deactivate ard
+
+activate pi
+pi -> pi : _estop_state = STATE_STOPPED
+activate pi
+deactivate pi
+
+pi -> relay : onPacketReceived(...)
+activate relay
+relay --> st : TPacket(RESP_STATUS) [TLS TCP]
+deactivate relay
+deactivate pi
+
+@enduml

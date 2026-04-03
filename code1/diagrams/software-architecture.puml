@@ -1,0 +1,79 @@
+@startuml arch_software
+skinparam backgroundColor white
+skinparam defaultFontName "Helvetica"
+skinparam ArrowColor #444444
+skinparam ArrowFontColor #666666
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 60
+skinparam padding 10
+
+skinparam rectangle {
+  BackgroundColor #fce8e8
+  BorderColor #cc6666
+  FontColor #222222
+}
+
+skinparam component {
+  BackgroundColor #ffffff
+  BorderColor #888888
+  FontColor #222222
+  Style rectangle
+}
+
+title Software Architecture Diagram
+
+rectangle "Arduino" as arduino_box #fce8e8 {
+  component "sensor_miniproject_template.ino\n«entry»" as alex
+  component "robotlib.ino\n«motor controller»" as robotlib
+  component "serial_driver.h\n«framing / ISR buffers»" as serial_drv
+  component "packets.h\n«TPacket protocol»" as packets_h
+  component "TCS3200\n«color sensor»" as tcs
+  component "Servo Arm\nBase/Shoulder/Elbow/Gripper" as servo
+  component "AFMotor Shield\nFL / FR / BL / BR" as motors
+
+  alex -down-> robotlib
+  alex -down-> serial_drv
+  alex -down-> packets_h
+  alex -down-> tcs
+  alex -down-> servo
+  robotlib -down-> motors
+}
+
+rectangle "Raspberry Pi" as pi_box #d8eaf8 {
+  component "pi_sensor.py\n«entry / coordinator»" as pi_sensor
+  component "packets.py\n«TPacket protocol»" as packets_py
+  component "alex_camera.py\n«picamera2 wrapper»" as alex_camera
+  component "relay.py\n«TLS TCP server :65432»" as relay
+  component "net_utils.py\n«TCP framing»" as net_utils
+  component "lidar_forwarder.py\n«scan streamer :5002»" as lidar_fwd
+  component "slam/lidar.py\n«RPLidar driver»" as lidar_drv
+  component "slam/settings.py\n«LIDAR config»" as settings
+  component "pyrplidar\n«RPLidar library»" as pyrplidar
+
+  pi_sensor -down-> packets_py
+  pi_sensor -down-> alex_camera
+  pi_sensor -right-> relay
+  relay -down-> net_utils
+  lidar_fwd -down-> lidar_drv
+  lidar_fwd -down-> settings
+  lidar_drv -down-> pyrplidar
+}
+
+rectangle "Desktop" as desktop_box #e8f8e8 {
+  component "second_terminal.py\n«TLS TCP client»" as second_term
+  component "net_utils.py\n«TCP framing»" as net_utils_dt
+  component "packets.py\n«TPacket protocol»" as packets_dt
+  component "slam_client.py\n«BreezySLAM + matplotlib»" as slam_client
+
+  second_term -down-> net_utils_dt
+  second_term -down-> packets_dt
+}
+
+alex <-right-> pi_sensor : USB Serial
+
+relay <-right-> second_term : TLS TCP
+
+lidar_fwd -right-> slam_client : TCP
+
+@enduml
