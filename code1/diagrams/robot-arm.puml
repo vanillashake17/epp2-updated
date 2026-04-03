@@ -47,7 +47,7 @@ note over op, servo
   Joint mapping:
   rb → Base   rs → Shoulder
   re → Elbow  rg → Gripper
-  rh → Home
+  rv → Arm speed   rh → Home
 end note
 
 @enduml
