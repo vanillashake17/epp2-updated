@@ -1,4 +1,4 @@
-@startuml seq_estop
+@startuml E_Stop_Command_Flow
 skinparam backgroundColor white
 skinparam defaultFontName "Helvetica"
 skinparam sequenceArrowColor #444444
@@ -27,21 +27,25 @@ st -> relay : COMMAND_ESTOP [TLS TCP]
 pi -> relay : checkSecondTerminal(_ser)
 activate relay
 relay -> ard : forward frame [USB Serial]
-activate ard
 deactivate relay
+activate ard
 
+ard --> pi : TPacket(RESP_OK)
 ard --> pi : TPacket(RESP_STATUS, STATE_STOPPED)
 deactivate ard
 
 activate pi
-pi -> pi : _estop_state = STATE_STOPPED
-activate pi
+pi -> pi : update _estop_state = STATE_STOPPED
 deactivate pi
 
-pi -> relay : onPacketReceived(...)
+pi -> relay : onPacketReceived(RESP_OK)
+activate relay
+relay --> st : TPacket(RESP_OK) [TLS TCP]
+deactivate relay
+
+pi -> relay : onPacketReceived(RESP_STATUS)
 activate relay
 relay --> st : TPacket(RESP_STATUS) [TLS TCP]
 deactivate relay
-deactivate pi
 
 @enduml
