@@ -19,7 +19,7 @@ The Raspberry Pi acts as the main hub, while the Arduino acts as the low-level h
 A second terminal is used by a secondary operator on a desktop computer to remotely control the robotic arm.
 
 - **`code1/second_terminal/second_terminal.py`**: The client-side terminal running on the Desktop. It uses TLS 1.2+ encryption using a self-signed certificate (`certs/server.crt`) to securely transmit arm joint positions to the Pi on TCP port 65432.
-- **`code1/second_terminal/relay.py`**: The server-side TLS relay running on the Pi. It decrypts the movement instructions and forwards them locally over to `pi_sensor.py` to be sent to the Arduino.
+- **`code1/second_terminal/relay.py`**: A module imported by `pi_sensor.py` (not a separate process). It starts a TLS TCP server on port 65432, accepts a connection from `second_terminal.py`, and bi-directionally relays TPacket frames between the second terminal and the Arduino serial port.
 - **`code1/second_terminal/net_utils.py`**: Wraps the network traffic in a 4-byte length-prefixed frame to prevent partial-packet TCP transmission errors.
 
 ### 3. Offloaded SLAM Data Pipeline (LiDAR -> Raspberry Pi -> Desktop)
