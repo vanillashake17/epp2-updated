@@ -57,6 +57,7 @@ rectangle "Raspberry Pi" as pi_box #d8eaf8 {
   relay -down-> net_utils
   lidar_fwd -down-> lidar_drv
   lidar_fwd -down-> settings
+  lidar_drv -down-> settings
   lidar_drv -down-> pyrplidar
 }
 
@@ -70,7 +71,7 @@ rectangle "Desktop" as desktop_box #e8f8e8 {
   second_term -down-> packets_dt
 }
 
-alex <-right-> pi_sensor : USB Serial
+serial_drv <-right-> pi_sensor : USB Serial
 
 relay <-right-> second_term : TLS TCP
 
