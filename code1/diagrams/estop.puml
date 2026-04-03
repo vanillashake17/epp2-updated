@@ -17,35 +17,50 @@ hide footbox
 
 title E-Stop Command Flow
 
+actor "Operator" as op
 participant ":second_terminal" as st
 participant ":relay" as relay
 participant ":pi_sensor" as pi
 participant ":Arduino" as ard
 
-st -> relay : COMMAND_ESTOP [TLS TCP]
+alt main terminal
+  op -> pi : stdin: "e"
+  activate pi
+  pi -> ard : sendCommand(COMMAND_ESTOP) [USB Serial]
+  activate ard
+  ard --> pi : TPacket(RESP_OK)
+  ard --> pi : TPacket(RESP_STATUS, STATE_STOPPED)
+  deactivate ard
+  pi -> pi : update _estop_state = STATE_STOPPED
+  pi --> op : "Status: STOPPED"
+  deactivate pi
 
-pi -> relay : checkSecondTerminal(_ser)
-activate relay
-relay -> ard : forward frame [USB Serial]
-deactivate relay
-activate ard
+else second terminal
+  st -> relay : COMMAND_ESTOP [TLS TCP]
 
-ard --> pi : TPacket(RESP_OK)
-ard --> pi : TPacket(RESP_STATUS, STATE_STOPPED)
-deactivate ard
+  pi -> relay : checkSecondTerminal(_ser)
+  activate relay
+  relay -> ard : forward frame [USB Serial]
+  deactivate relay
+  activate ard
 
-activate pi
-pi -> pi : update _estop_state = STATE_STOPPED
-deactivate pi
+  ard --> pi : TPacket(RESP_OK)
+  ard --> pi : TPacket(RESP_STATUS, STATE_STOPPED)
+  deactivate ard
 
-pi -> relay : onPacketReceived(RESP_OK)
-activate relay
-relay --> st : TPacket(RESP_OK) [TLS TCP]
-deactivate relay
+  activate pi
+  pi -> pi : update _estop_state = STATE_STOPPED
+  deactivate pi
 
-pi -> relay : onPacketReceived(RESP_STATUS)
-activate relay
-relay --> st : TPacket(RESP_STATUS) [TLS TCP]
-deactivate relay
+  pi -> relay : onPacketReceived(RESP_OK)
+  activate relay
+  relay --> st : TPacket(RESP_OK) [TLS TCP]
+  deactivate relay
+
+  pi -> relay : onPacketReceived(RESP_STATUS)
+  activate relay
+  relay --> st : TPacket(RESP_STATUS) [TLS TCP]
+  deactivate relay
+end
 
 @enduml
