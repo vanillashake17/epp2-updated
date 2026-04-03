@@ -23,6 +23,8 @@ participant ":pi_sensor" as pi
 participant ":Arduino" as ard
 
 st -> relay : COMMAND_ESTOP [TLS TCP]
+
+pi -> relay : checkSecondTerminal(_ser)
 activate relay
 relay -> ard : forward frame [USB Serial]
 activate ard
