@@ -263,7 +263,7 @@ def handleCameraCommand():
         print("Camera not enabled.")
         return
 
-    if not isEstopActive(): # estop not active, capture and display max 5 images.
+    if not isEstopActive(): # estop not active, capture and display max 10 images.
         if _frames_remaining > 0:
             newImage = alex_camera.captureGreyscaleFrame(_camera)
             alex_camera.renderGreyscaleFrame(newImage)
@@ -280,7 +280,7 @@ def handleCameraCommand():
 # COMMAND-LINE INTERFACE
 # ----------------------------------------------------------------
 
-_motor_speed = 175   # current speed (0-255)
+_motor_speed = 200   # current speed (0-255)
 SPEED_STEP   = 25    # how much +/- changes the speed
 RAW_MOVE_MS  = 100   # duration per keypress in raw drive mode
 
@@ -431,7 +431,7 @@ def runCommandInterface():
     print("  a <ms> = Turn left d <ms> = Turn right")
     print("  (duration in ms, default 2000. e.g. 'w 500')")
     print("  x = Stop robot")
-    print("  +/- = Speed up/down  (current: 200)")
+    print(f"  +/- = Speed up/down  (current: {_motor_speed})")
     print("  m = Raw drive mode (WASD instant control)")
     print("  rb <0-175> = Base   rs <80-155> = Shoulder")
     print("  re <105-175> = Elbow  rg <20-50> = Gripper")

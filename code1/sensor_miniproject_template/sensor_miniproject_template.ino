@@ -25,8 +25,8 @@
 #include <util/delay.h>
 
 // Motor durations for timed movement
-#define MOVE_DURATION_MS  2000
-#define TURN_DURATION_MS  2000
+#define MOVE_DURATION_MS 2000
+#define TURN_DURATION_MS 2000
 
 // Motor functions (forward, backward, ccw, cw, stop) are provided
 // by robotlib.ino which is compiled together with this sketch.
@@ -138,7 +138,6 @@ static uint32_t measureChannel(uint8_t s2, uint8_t s3) {
   else
     PORTA &= ~S3;
 
-
   uint32_t count = 0;
   unsigned long start = _timerTicks;
 
@@ -161,8 +160,8 @@ static void readColorChannels(uint32_t *r, uint32_t *g, uint32_t *b) {
 
 static void setupTimer() {
   cli();
-  TCCR2A = (1 << WGM21);    // CTC mode
-  TCCR2B = 0;               // no clock yet
+  TCCR2A = (1 << WGM21); // CTC mode
+  TCCR2B = 0;            // no clock yet
   OCR2A = 199;
   TIMSK2 = (1 << OCIE2A);
   TCNT2 = 0;
@@ -170,7 +169,7 @@ static void setupTimer() {
 }
 
 static void startTimer() {
-  TCCR2B |= (1 << CS21);  // prescaler 8 → START TIMER
+  TCCR2B |= (1 << CS21); // prescaler 8 → START TIMER
 }
 
 ISR(TIMER2_COMPA_vect) { _timerTicks++; }
@@ -179,7 +178,7 @@ ISR(INT1_vect) {
   unsigned long now = _timerTicks;
 
   if ((now - _lastTime) > THRESHOLD) {
-    bool pressed = !(PIND & (1 << PD1));
+    bool pressed = !(PIND & (1 << PD1)); // LOGIC low button
 
     if (buttonState == STATE_RUNNING && pressed) {
       buttonState = STATE_STOPPED;
@@ -233,17 +232,22 @@ volatile int arm_pulse_widths[4];
 volatile int arm_stage = 0;
 
 int arm_current[4] = {90, 125, 90, 45};
-int arm_target[4]  = {90, 125, 90, 45};
+int arm_target[4] = {90, 125, 90, 45};
 unsigned long arm_last_move[4] = {0, 0, 0, 0};
 int arm_step_delay = 10; // ms between 1-degree steps
 
 static int constrainAngle(int idx, int angle) {
   switch (idx) {
-    case BASE_PIN: return constrain(angle, BASE_MIN, BASE_MAX);
-    case SHLD_PIN: return constrain(angle, SHLD_MIN, SHLD_MAX);
-    case ELBW_PIN: return constrain(angle, ELBW_MIN, ELBW_MAX);
-    case GRIP_PIN: return constrain(angle, GRIP_MIN, GRIP_MAX);
-    default:       return constrain(angle, 0, 180);
+  case BASE_PIN:
+    return constrain(angle, BASE_MIN, BASE_MAX);
+  case SHLD_PIN:
+    return constrain(angle, SHLD_MIN, SHLD_MAX);
+  case ELBW_PIN:
+    return constrain(angle, ELBW_MIN, ELBW_MAX);
+  case GRIP_PIN:
+    return constrain(angle, GRIP_MIN, GRIP_MAX);
+  default:
+    return constrain(angle, 0, 180);
   }
 }
 
@@ -260,7 +264,7 @@ static void homeArm() {
 }
 
 static void setupArmTimer() {
-  DDRC |= 0x0F;   // PC0-PC3 as outputs
+  DDRC |= 0x0F; // PC0-PC3 as outputs
   PORTC &= ~0x0F;
 
   for (int i = 0; i < 4; i++)
@@ -269,31 +273,54 @@ static void setupArmTimer() {
   cli();
   TCCR5A = 0;
   TCCR5B = 0;
-  TCNT5  = 0;
-  OCR5A  = 39999;           // 20ms cycle
-  OCR5B  = 0;
-  TCCR5B |= (1 << WGM52);  // CTC mode
-  TCCR5B |= (1 << CS51);   // prescaler 8
+  TCNT5 = 0;
+  OCR5A = 39999; // 20ms cycle
+  OCR5B = 0;
+  TCCR5B |= (1 << WGM52); // CTC mode
+  TCCR5B |= (1 << CS51);  // prescaler 8
   TIMSK5 |= (1 << OCIE5A) | (1 << OCIE5B);
   sei();
 }
 
 // 20ms period restart
-ISR(TIMER5_COMPA_vect) {
-  arm_stage = 0;
-}
+ISR(TIMER5_COMPA_vect) { arm_stage = 0; }
 
 // staggered servo pulses
 ISR(TIMER5_COMPB_vect) {
   switch (arm_stage) {
-    case 0: PORTC |=  (1 << BASE_PIN); OCR5B += arm_pulse_widths[0]; break;
-    case 1: PORTC &= ~(1 << BASE_PIN); OCR5B  = SHLD_CHECKPOINT;    break;
-    case 2: PORTC |=  (1 << SHLD_PIN); OCR5B += arm_pulse_widths[1]; break;
-    case 3: PORTC &= ~(1 << SHLD_PIN); OCR5B  = ELBW_CHECKPOINT;    break;
-    case 4: PORTC |=  (1 << ELBW_PIN); OCR5B += arm_pulse_widths[2]; break;
-    case 5: PORTC &= ~(1 << ELBW_PIN); OCR5B  = GRIP_CHECKPOINT;    break;
-    case 6: PORTC |=  (1 << GRIP_PIN); OCR5B += arm_pulse_widths[3]; break;
-    case 7: PORTC &= ~(1 << GRIP_PIN); OCR5B  = BASE_CHECKPOINT; arm_stage = -1; break;
+  case 0:
+    PORTC |= (1 << BASE_PIN);
+    OCR5B += arm_pulse_widths[0];
+    break;
+  case 1:
+    PORTC &= ~(1 << BASE_PIN);
+    OCR5B = SHLD_CHECKPOINT;
+    break;
+  case 2:
+    PORTC |= (1 << SHLD_PIN);
+    OCR5B += arm_pulse_widths[1];
+    break;
+  case 3:
+    PORTC &= ~(1 << SHLD_PIN);
+    OCR5B = ELBW_CHECKPOINT;
+    break;
+  case 4:
+    PORTC |= (1 << ELBW_PIN);
+    OCR5B += arm_pulse_widths[2];
+    break;
+  case 5:
+    PORTC &= ~(1 << ELBW_PIN);
+    OCR5B = GRIP_CHECKPOINT;
+    break;
+  case 6:
+    PORTC |= (1 << GRIP_PIN);
+    OCR5B += arm_pulse_widths[3];
+    break;
+  case 7:
+    PORTC &= ~(1 << GRIP_PIN);
+    OCR5B = BASE_CHECKPOINT;
+    arm_stage = -1;
+    break;
   }
   arm_stage++;
 }
@@ -304,8 +331,10 @@ static void updateArmMovement() {
   for (int i = 0; i < 4; i++) {
     if ((arm_current[i] != arm_target[i]) &&
         (now - arm_last_move[i] >= (unsigned long)arm_step_delay)) {
-      if (arm_current[i] < arm_target[i]) arm_current[i]++;
-      else                                 arm_current[i]--;
+      if (arm_current[i] < arm_target[i])
+        arm_current[i]++;
+      else
+        arm_current[i]--;
 
       int pw = angleToPulse(arm_current[i]);
       cli();
@@ -372,74 +401,79 @@ static void handleCommand(const TPacket *cmd) {
     break;
   }
 
-  /*case COMMAND_MOVE: {
-  uint8_t speed = (uint8_t)cmd->params[0];
-  char dir = cmd->data[0];
+    /*case COMMAND_MOVE: {
+    uint8_t speed = (uint8_t)cmd->params[0];
+    char dir = cmd->data[0];
 
-  switch (dir) {
-    case 'w': forward(speed); break;
-    case 's': backward(speed); break;
-    case 'a': ccw(speed); break;
-    case 'd': cw(speed); break;
-  }
+    switch (dir) {
+      case 'w': forward(speed); break;
+      case 's': backward(speed); break;
+      case 'a': ccw(speed); break;
+      case 'd': cw(speed); break;
+    }
 
-  sendResponse(RESP_OK, 0);
-  break;
-  }
-  }*/
+    sendResponse(RESP_OK, 0);
+    break;
+    }
+    }*/
 
-  
-  case COMMAND_MOVE:
-    {
-      if (buttonState != STATE_RUNNING) {
-        sendStatus(STATE_STOPPED);
-        break;
-      }
+  case COMMAND_MOVE: {
+    if (buttonState != STATE_RUNNING) {
+      sendStatus(STATE_STOPPED);
+      break;
+    }
 
-      uint8_t speed = (uint8_t)cmd->params[0];
-      uint32_t duration = cmd->params[1];
-      char dir = cmd->data[0];
+    uint8_t speed = (uint8_t)cmd->params[0];
+    uint32_t duration = cmd->params[1];
+    char dir = cmd->data[0];
 
-      switch (dir) {
-        case 'w': forward(speed); break;
-        case 's': backward(speed); break;
-        case 'a': ccw(speed); break;
-        case 'd': cw(speed); break;
-        case 'x':
-        default:
-          stop();
-          sendResponse(RESP_OK, 0);
-          break;
-      }
+    switch (dir) {
+    case 'w':
+      forward(speed);
+      break;
+    case 's':
+      backward(speed);
+      break;
+    case 'a':
+      ccw(speed);
+      break;
+    case 'd':
+      cw(speed);
+      break;
+    case 'x':
+    default:
+      stop();
+      sendResponse(RESP_OK, 0);
+      break;
+    }
 
-      if (dir == 'w' || dir == 's' || dir == 'a' || dir == 'd') {
-        unsigned long start = millis();
-        bool interrupted = false;
-        while (millis() - start < duration) {
-          TPacket incoming;
-          if (receiveFrame(&incoming)) {
-            if (incoming.packetType == PACKET_TYPE_COMMAND &&
-                incoming.command == COMMAND_MOVE &&
-                incoming.data[0] == 'x') {
-              interrupted = true;
-              break;
-            }
-            if (incoming.packetType == PACKET_TYPE_COMMAND &&
-                incoming.command == COMMAND_ESTOP) {
-              interrupted = true;
-              break;
-            }
+    if (dir == 'w' || dir == 's' || dir == 'a' || dir == 'd') {
+      unsigned long start = millis();
+      bool interrupted = false;
+      while (millis() - start < duration) {
+        TPacket incoming;
+        if (receiveFrame(&incoming)) {
+          if (incoming.packetType == PACKET_TYPE_COMMAND &&
+              incoming.command == COMMAND_MOVE && incoming.data[0] == 'x') {
+            interrupted = true;
+            break;
           }
-          if (buttonState != STATE_RUNNING) {
+          if (incoming.packetType == PACKET_TYPE_COMMAND &&
+              incoming.command == COMMAND_ESTOP) {
             interrupted = true;
             break;
           }
         }
-        stop();
-        sendResponse(RESP_OK, interrupted ? 1 : 0);
+        if (buttonState != STATE_RUNNING) {
+          interrupted = true;
+          break;
+        }
       }
-      break;
+      stop();
+      sendResponse(RESP_OK, interrupted ? 1 : 0);
     }
+    break;
+  }
 
   case COMMAND_ARM: {
     // data[0] = command char: B/S/E/G/V/H
@@ -448,12 +482,24 @@ static void handleCommand(const TPacket *cmd) {
     int val = (int)cmd->params[0];
 
     switch (c) {
-      case 'B': arm_target[BASE_PIN] = constrainAngle(BASE_PIN, val); break;
-      case 'S': arm_target[SHLD_PIN] = constrainAngle(SHLD_PIN, val); break;
-      case 'E': arm_target[ELBW_PIN] = constrainAngle(ELBW_PIN, val); break;
-      case 'G': arm_target[GRIP_PIN] = constrainAngle(GRIP_PIN, val); break;
-      case 'V': arm_step_delay = constrain(val, 1, 999); break;
-      case 'H': homeArm(); break;
+    case 'B':
+      arm_target[BASE_PIN] = constrainAngle(BASE_PIN, val);
+      break;
+    case 'S':
+      arm_target[SHLD_PIN] = constrainAngle(SHLD_PIN, val);
+      break;
+    case 'E':
+      arm_target[ELBW_PIN] = constrainAngle(ELBW_PIN, val);
+      break;
+    case 'G':
+      arm_target[GRIP_PIN] = constrainAngle(GRIP_PIN, val);
+      break;
+    case 'V':
+      arm_step_delay = constrain(val, 1, 999);
+      break;
+    case 'H':
+      homeArm();
+      break;
     }
 
     TPacket pkt;
@@ -467,7 +513,6 @@ static void handleCommand(const TPacket *cmd) {
   }
   }
 }
-
 
 // =============================================================
 // Arduino setup() and loop()
@@ -483,10 +528,10 @@ void setup() {
 
   // ----------- COLOR SENSOR PIN SETUP -----------
   DDRA |= S0 | S1 | S2 | S3; // outputs
-  DDRA &= ~SENSOR_OUT;        // input
-  DDRD &= ~(1 << PD1);        // input (button pin)
+  DDRA &= ~SENSOR_OUT;       // input
+  DDRD &= ~(1 << PD1);       // input (button pin)
 
-  PORTA |= S0;                // S0=HIGH, S1=LOW -> 20% frequency scaling
+  PORTA |= S0; // S0=HIGH, S1=LOW -> 20% frequency scaling
   PORTA &= ~S1;
   setupTimer();
   startTimer();
