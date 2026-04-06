@@ -433,8 +433,8 @@ def runCommandInterface():
     print("  x = Stop robot")
     print(f"  +/- = Speed up/down  (current: {_motor_speed})")
     print("  m = Raw drive mode (WASD instant control)")
-    print("  rb <0-175> = Base   rs <80-155> = Shoulder")
-    print("  re <105-175> = Elbow  rg <20-50> = Gripper")
+    print("  rb <0-175> = Base   rs <140-180> = Shoulder")
+    print("  re <0-180> = Elbow  rg <5-40> = Gripper")
     print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
 

@@ -202,11 +202,17 @@ ISR(INT1_vect) {
 // Robot arm (Timer 5 servo driver)
 // =============================================================
 
-// servo pins on Port C (PC0-PC3)
-#define BASE_PIN 0
-#define SHLD_PIN 1
-#define ELBW_PIN 3
-#define GRIP_PIN 2
+// PORTC bit positions (physical wiring)
+#define BASE_PIN 0  // PC0 = Arduino 37
+#define SHLD_PIN 1  // PC1 = Arduino 36
+#define ELBW_PIN 3  // PC3 = Arduino 34
+#define GRIP_PIN 2  // PC2 = Arduino 35
+
+// array indices (must match ISR stage order)
+#define BASE_IDX 0
+#define SHLD_IDX 1
+#define ELBW_IDX 2
+#define GRIP_IDX 3
 
 // servo pulse range in microseconds
 #define MIN_PULSE 600
@@ -215,12 +221,12 @@ ISR(INT1_vect) {
 // empirically tested servo limits (degrees)
 #define BASE_MIN 0
 #define BASE_MAX 175
-#define SHLD_MIN 80
-#define SHLD_MAX 155
-#define ELBW_MIN 105
-#define ELBW_MAX 175
-#define GRIP_MIN 20
-#define GRIP_MAX 50
+#define SHLD_MIN 140
+#define SHLD_MAX 180
+#define ELBW_MIN 0
+#define ELBW_MAX 180
+#define GRIP_MIN 5
+#define GRIP_MAX 40
 
 // staggered checkpoints within the 20ms period (timer ticks)
 #define BASE_CHECKPOINT 0
@@ -231,20 +237,20 @@ ISR(INT1_vect) {
 volatile int arm_pulse_widths[4];
 volatile int arm_stage = 0;
 
-int arm_current[4] = {90, 125, 90, 45};
-int arm_target[4] = {90, 125, 90, 45};
+int arm_current[4] = {90, 155, 90, 25};
+int arm_target[4] = {90, 155, 90, 25};
 unsigned long arm_last_move[4] = {0, 0, 0, 0};
 int arm_step_delay = 10; // ms between 1-degree steps
 
 static int constrainAngle(int idx, int angle) {
   switch (idx) {
-  case BASE_PIN:
+  case BASE_IDX:
     return constrain(angle, BASE_MIN, BASE_MAX);
-  case SHLD_PIN:
+  case SHLD_IDX:
     return constrain(angle, SHLD_MIN, SHLD_MAX);
-  case ELBW_PIN:
+  case ELBW_IDX:
     return constrain(angle, ELBW_MIN, ELBW_MAX);
-  case GRIP_PIN:
+  case GRIP_IDX:
     return constrain(angle, GRIP_MIN, GRIP_MAX);
   default:
     return constrain(angle, 0, 180);
@@ -258,9 +264,9 @@ static int angleToPulse(int angle) {
 
 static void homeArm() {
   arm_target[0] = constrainAngle(0, 90);
-  arm_target[1] = constrainAngle(1, 125);
+  arm_target[1] = constrainAngle(1, 155);
   arm_target[2] = constrainAngle(2, 90);
-  arm_target[3] = constrainAngle(3, 45);
+  arm_target[3] = constrainAngle(3, 25);
 }
 
 static void setupArmTimer() {
@@ -483,16 +489,16 @@ static void handleCommand(const TPacket *cmd) {
 
     switch (c) {
     case 'B':
-      arm_target[BASE_PIN] = constrainAngle(BASE_PIN, val);
+      arm_target[BASE_IDX] = constrainAngle(BASE_IDX, val);
       break;
     case 'S':
-      arm_target[SHLD_PIN] = constrainAngle(SHLD_PIN, val);
+      arm_target[SHLD_IDX] = constrainAngle(SHLD_IDX, val);
       break;
     case 'E':
-      arm_target[ELBW_PIN] = constrainAngle(ELBW_PIN, val);
+      arm_target[ELBW_IDX] = constrainAngle(ELBW_IDX, val);
       break;
     case 'G':
-      arm_target[GRIP_PIN] = constrainAngle(GRIP_PIN, val);
+      arm_target[GRIP_IDX] = constrainAngle(GRIP_IDX, val);
       break;
     case 'V':
       arm_step_delay = constrain(val, 1, 999);

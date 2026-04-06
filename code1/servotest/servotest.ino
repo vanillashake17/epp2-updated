@@ -1,10 +1,10 @@
 #include <Servo.h>
 
 // ── Enable / disable individual servos ──────────────────────────────────────
-const bool TEST_BASE     = false;
-const bool TEST_SHOULDER = false;
+const bool TEST_BASE     = true;
+const bool TEST_SHOULDER = true;
 const bool TEST_ELBOW    = true;
-const bool TEST_GRIPPER  = false;
+const bool TEST_GRIPPER  = true;
 
 // ── Pin assignments ──────────────────────────────────────────────────────────
 const int PIN_BASE     = 37;
