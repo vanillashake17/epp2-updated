@@ -30,7 +30,7 @@ from pyrplidar import PyRPlidar, PyRPlidarMeasurement
 
 # RPLidar A1M8
 # PORT = "COM4"           # Windows
-PORT = "/dev/ttyUSB0"   # Linux
+PORT = "/dev/ttyUSB1"   # Linux
 BAUDRATE = 115200       # The default baud rate for the RPLidar A1M8
 _LIDAR_OBJECT = None
 

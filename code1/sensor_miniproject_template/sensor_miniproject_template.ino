@@ -205,8 +205,8 @@ ISR(INT1_vect) {
 // servo pins on Port C (PC0-PC3)
 #define BASE_PIN 0
 #define SHLD_PIN 1
-#define ELBW_PIN 2
-#define GRIP_PIN 3
+#define ELBW_PIN 3
+#define GRIP_PIN 2
 
 // servo pulse range in microseconds
 #define MIN_PULSE 600

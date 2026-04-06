@@ -30,7 +30,7 @@ from packets import *
 # FEATURE FLAGS — set to False if a component is not connected
 # ----------------------------------------------------------------
 
-CAMERA_ENABLED = True
+CAMERA_ENABLED = False
 COLOR_ENABLED  = True
 
 # ----------------------------------------------------------------
