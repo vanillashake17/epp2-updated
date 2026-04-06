@@ -223,10 +223,16 @@ ISR(INT1_vect) {
 #define BASE_MAX 175
 #define SHLD_MIN 140
 #define SHLD_MAX 180
-#define ELBW_MIN 0
+#define ELBW_MIN 100
 #define ELBW_MAX 180
 #define GRIP_MIN 5
 #define GRIP_MAX 40
+
+// default home pose (degrees)
+#define BASE_HOME 90
+#define SHLD_HOME 155
+#define ELBW_HOME 120
+#define GRIP_HOME 25
 
 // staggered checkpoints within the 20ms period (timer ticks)
 #define BASE_CHECKPOINT 0
@@ -237,8 +243,8 @@ ISR(INT1_vect) {
 volatile int arm_pulse_widths[4];
 volatile int arm_stage = 0;
 
-int arm_current[4] = {90, 155, 90, 25};
-int arm_target[4] = {90, 155, 90, 25};
+int arm_current[4] = {BASE_HOME, SHLD_HOME, ELBW_HOME, GRIP_HOME};
+int arm_target[4] = {BASE_HOME, SHLD_HOME, ELBW_HOME, GRIP_HOME};
 unsigned long arm_last_move[4] = {0, 0, 0, 0};
 int arm_step_delay = 10; // ms between 1-degree steps
 
@@ -263,10 +269,10 @@ static int angleToPulse(int angle) {
 }
 
 static void homeArm() {
-  arm_target[0] = constrainAngle(0, 90);
-  arm_target[1] = constrainAngle(1, 155);
-  arm_target[2] = constrainAngle(2, 90);
-  arm_target[3] = constrainAngle(3, 25);
+  arm_target[0] = constrainAngle(0, BASE_HOME);
+  arm_target[1] = constrainAngle(1, SHLD_HOME);
+  arm_target[2] = constrainAngle(2, ELBW_HOME);
+  arm_target[3] = constrainAngle(3, GRIP_HOME);
 }
 
 static void setupArmTimer() {
