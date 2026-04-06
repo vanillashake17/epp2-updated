@@ -221,17 +221,17 @@ ISR(INT1_vect) {
 // empirically tested servo limits (degrees)
 #define BASE_MIN 0
 #define BASE_MAX 175
-#define SHLD_MIN 140
-#define SHLD_MAX 180
-#define ELBW_MIN 100
-#define ELBW_MAX 180
+#define SHLD_MIN 140 //UP
+#define SHLD_MAX 180 // DOWN
+#define ELBW_MIN 0 // DOWN and IN
+#define ELBW_MAX 60 // UP and OUT
 #define GRIP_MIN 5
-#define GRIP_MAX 40
+#define GRIP_MAX 35
 
 // default home pose (degrees)
-#define BASE_HOME 90
-#define SHLD_HOME 155
-#define ELBW_HOME 120
+#define BASE_HOME 100
+#define SHLD_HOME 180
+#define ELBW_HOME 0
 #define GRIP_HOME 25
 
 // staggered checkpoints within the 20ms period (timer ticks)

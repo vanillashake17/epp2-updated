@@ -1,10 +1,10 @@
 #include <Servo.h>
 
 // ── Enable / disable individual servos ──────────────────────────────────────
-const bool TEST_BASE     = true;
-const bool TEST_SHOULDER = true;
+const bool TEST_BASE     = false;
+const bool TEST_SHOULDER = false;
 const bool TEST_ELBOW    = true;
-const bool TEST_GRIPPER  = true;
+const bool TEST_GRIPPER  = false;
 
 // ── Pin assignments ──────────────────────────────────────────────────────────
 const int PIN_BASE     = 37;
@@ -14,16 +14,16 @@ const int PIN_GRIPPER  = 35;
 
 // ── Angle constraints (must match sensor_miniproject_template.ino) ───────────
 const int BASE_MIN = 0,   BASE_MAX = 175;
-const int SHLD_MIN = 140, SHLD_MAX = 180;
-const int ELBW_MIN = 0, ELBW_MAX = 180;
-const int GRIP_MIN = 5,   GRIP_MAX = 40;  // 0 is open, 50 is fully closed
+const int SHLD_MIN = 140, SHLD_MAX = 180; 
+const int ELBW_MIN = 0, ELBW_MAX = 60;
+const int GRIP_MIN = 5,   GRIP_MAX = 35;  // 0 is open, 35 is fully closed
 
 // ── Pulse range (µs) ────────────────────────────────────────────────────────
 const int MIN_PULSE_US = 600;
 const int MAX_PULSE_US = 2400;
 
 // ── Timing ───────────────────────────────────────────────────────────────────
-const int STEP_DELAY_MS = 10;
+const int STEP_DELAY_MS = 25;
 
 Servo servoBase;
 Servo servoShoulder;
