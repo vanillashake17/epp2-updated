@@ -438,8 +438,15 @@ def runCommandInterface():
     print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
 
+    _last_color_time = 0.0
+
     while True:
         _processSerial()
+
+        now = time.time()
+        if COLOR_ENABLED and (now - _last_color_time) >= 1.0:
+            handleColorCommand()
+            _last_color_time = now
 
         rlist, _, _ = select.select([sys.stdin], [], [], 0)
         if rlist:
