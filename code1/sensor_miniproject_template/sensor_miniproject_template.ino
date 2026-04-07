@@ -416,22 +416,6 @@ static void handleCommand(const TPacket *cmd) {
     break;
   }
 
-    /*case COMMAND_MOVE: {
-    uint8_t speed = (uint8_t)cmd->params[0];
-    char dir = cmd->data[0];
-
-    switch (dir) {
-      case 'w': forward(speed); break;
-      case 's': backward(speed); break;
-      case 'a': ccw(speed); break;
-      case 'd': cw(speed); break;
-    }
-
-    sendResponse(RESP_OK, 0);
-    break;
-    }
-    }*/
-
   case COMMAND_MOVE: {
     if (buttonState != STATE_RUNNING) {
       sendStatus(STATE_STOPPED);

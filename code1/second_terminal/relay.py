@@ -38,7 +38,7 @@ import ssl
 # ============================================================
 
 SECOND_TERM_PORT    = 65432   # TCP port second_terminal.py connects to
-SECOND_TERM_TIMEOUT = 30      # Seconds to wait for second_terminal.py to connect
+SECOND_TERM_TIMEOUT = 300     # Seconds to wait for second_terminal.py to connect
 
 
 # ============================================================
@@ -52,8 +52,6 @@ _st_conn   = None   # Active client socket from second_terminal.py
 # ============================================================
 # Second terminal relay
 # ============================================================
-
-SECOND_TERM_TIMEOUT = 300 # 300 s is suitable; increase if needed
 TLS_ENABLED = True
 TLS_CERT_PATH = 'certs/server.crt'
 TLS_KEY_PATH = 'certs/server.key'
@@ -118,7 +116,6 @@ def start():
     ssl_context = _make_server_ssl_context() if TLS_ENABLED else None
     _st_server = TCPServer(port=SECOND_TERM_PORT, ssl_context=ssl_context)
     if _st_server.start():
-        print("YES WE ARE USING TLS!")
         print("[relay] Waiting for second_terminal.py to connect "
               "(open a new terminal: python3 second_terminal/second_terminal.py)...")
         _st_conn = _st_server.accept(timeout=SECOND_TERM_TIMEOUT)

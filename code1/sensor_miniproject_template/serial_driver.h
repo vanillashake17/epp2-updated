@@ -132,11 +132,6 @@ ISR(USART0_RX_vect) {
 }
 #endif
 
-// TODO (Activity 1): Implement the RX Complete ISR.
-// Vector: USART0_RX_vect
-// Read UDR0 immediately.  If the buffer is not full, store the byte
-// and advance the write index; otherwise discard it.
-
 // =============================================================
 // Framing: magic number + XOR checksum (pre-implemented)
 // =============================================================

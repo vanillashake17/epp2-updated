@@ -183,6 +183,22 @@ def isEstopActive():
 # PACKET DISPLAY
 # ----------------------------------------------------------------
 
+_ARM_MIN_PULSE_US = 600
+_ARM_MAX_PULSE_US = 2400
+
+
+def _armTicksToAngle(value: int) -> int:
+    """Convert ARM response value to degrees.
+
+    The Arduino sends timer ticks (0.5 µs each at prescaler 8 / 16 MHz).
+    """
+    if 0 <= value <= 180:
+        return value  # already degrees (old firmware)
+    us = value / 2.0
+    angle = round((us - _ARM_MIN_PULSE_US) * 180.0 / (_ARM_MAX_PULSE_US - _ARM_MIN_PULSE_US))
+    return max(0, min(180, int(angle)))
+
+
 def printPacket(pkt):
     global _estop_state
     ptype = pkt['packetType']
@@ -207,7 +223,7 @@ def printPacket(pkt):
 
         elif cmd == RESP_ARM:
             labels = ['Base', 'Shoulder', 'Elbow', 'Gripper']
-            angles = [pkt['params'][i] for i in range(4)]
+            angles = [_armTicksToAngle(pkt['params'][i]) for i in range(4)]
             print("Arm: " + "  ".join(f"{l}={a}°" for l, a in zip(labels, angles)))
 
         else:
