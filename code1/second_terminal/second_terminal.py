@@ -146,6 +146,11 @@ def _printPacket(pkt):
             state         = pkt['params'][0]
             _estop_active = (state == STATE_STOPPED)
             print(f"[robot] Status: {'STOPPED' if _estop_active else 'RUNNING'}")
+        elif cmd == RESP_COLOR:
+            r = pkt['params'][0]
+            g = pkt['params'][1]
+            b = pkt['params'][2]
+            print(f"[robot] Color: R={r} Hz, G={g} Hz, B={b} Hz")
         elif cmd == RESP_ARM:
             print(f"[robot] Arm angles: B={pkt['params'][0]} S={pkt['params'][1]} "
                   f"E={pkt['params'][2]} G={pkt['params'][3]}")
