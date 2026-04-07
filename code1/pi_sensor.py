@@ -248,7 +248,7 @@ def handleColorCommand():
 if CAMERA_ENABLED:
     import alex_camera
     _camera = alex_camera.cameraOpen()
-_frames_remaining = 10  # frames remaining before further captures are refused
+_frames_remaining = 30  # frames remaining before further captures are refused
 
 
 def handleCameraCommand():
