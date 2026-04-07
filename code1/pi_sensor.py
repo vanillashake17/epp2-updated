@@ -30,7 +30,7 @@ from packets import *
 # FEATURE FLAGS — set to False if a component is not connected
 # ----------------------------------------------------------------
 
-CAMERA_ENABLED = False
+CAMERA_ENABLED = True
 COLOR_ENABLED  = True
 
 # ----------------------------------------------------------------
@@ -391,16 +391,16 @@ def runRawDriveMode():
 
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
-    _last_color_time = 0.0
+    #_last_color_time = 0.0
     try:
         tty.setcbreak(fd)
         while True:
             _processSerial()
 
-            now = time.time()
-            if COLOR_ENABLED and (now - _last_color_time) >= 1.0:
-                handleColorCommand()
-                _last_color_time = now
+            #now = time.time()
+            #if COLOR_ENABLED and (now - _last_color_time) >= 5.0:
+                #handleColorCommand()
+                #_last_color_time = now
 
             rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
             if not rlist:
@@ -444,15 +444,11 @@ def runCommandInterface():
     print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
 
-    _last_color_time = 0.0
+
 
     while True:
         _processSerial()
 
-        now = time.time()
-        if COLOR_ENABLED and (now - _last_color_time) >= 1.0:
-            handleColorCommand()
-            _last_color_time = now
 
         rlist, _, _ = select.select([sys.stdin], [], [], 0)
         if rlist:

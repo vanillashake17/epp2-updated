@@ -2,8 +2,8 @@
 
 // ── Enable / disable individual servos ──────────────────────────────────────
 const bool TEST_BASE     = false;
-const bool TEST_SHOULDER = false;
-const bool TEST_ELBOW    = true;
+const bool TEST_SHOULDER = true;
+const bool TEST_ELBOW    = false;
 const bool TEST_GRIPPER  = false;
 
 // ── Pin assignments ──────────────────────────────────────────────────────────
