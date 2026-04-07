@@ -205,7 +205,7 @@ ISR(INT1_vect) {
 // PORTC bit positions (physical wiring)
 #define BASE_PIN 0  // PC0 = Arduino 37
 #define SHLD_PIN 1  // PC1 = Arduino 36
-#define ELBW_PIN 3  // PC3 = Arduino 34
+#define ELBW_PIN 4  // PC4 = Arduino 33
 #define GRIP_PIN 2  // PC2 = Arduino 35
 
 // array indices (must match ISR stage order)
@@ -219,7 +219,7 @@ ISR(INT1_vect) {
 #define MAX_PULSE 2400
 
 // empirically tested servo limits (degrees)
-#define BASE_MIN 110
+#define BASE_MIN 130
 #define BASE_MAX 180
 #define SHLD_MIN 140 //UP
 #define SHLD_MAX 180 // DOWN
@@ -230,7 +230,7 @@ ISR(INT1_vect) {
 
 // default home pose (degrees)
 #define BASE_HOME 180
-#define SHLD_HOME 140
+#define SHLD_HOME 180
 #define ELBW_HOME 50
 #define GRIP_HOME 25
 
@@ -276,8 +276,8 @@ static void homeArm() {
 }
 
 static void setupArmTimer() {
-  DDRC |= 0x0F; // PC0-PC3 as outputs
-  PORTC &= ~0x0F;
+  DDRC |= 0x17; // PC0-PC2, PC4 as outputs
+  PORTC &= ~0x17;
 
   for (int i = 0; i < 4; i++)
     arm_pulse_widths[i] = angleToPulse(arm_current[i]);

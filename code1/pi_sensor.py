@@ -287,6 +287,13 @@ def handleCameraCommand():
 _motor_speed = 200   # current speed (0-255)
 SPEED_STEP   = 25    # how much +/- changes the speed
 RAW_MOVE_MS  = 100   # duration per keypress in raw drive mode
+_auto_color  = False # auto-print colour every 6 s when True
+
+
+def toggleAutoColor():
+    global _auto_color
+    _auto_color = not _auto_color
+    print(f"Auto colour: {'ON' if _auto_color else 'OFF'}")
 
 
 def handleMovementCommand(direction, duration_ms):
@@ -339,6 +346,9 @@ def handleUserInput(line):
         print("Sending E-Stop command...")
         sendCommand(COMMAND_ESTOP, data=b'This is a debug message')
 
+    elif line == 'n':
+        toggleAutoColor()
+
     elif line == 'c':
         handleColorCommand()
 
@@ -373,7 +383,7 @@ def handleUserInput(line):
         handleSpeedChange(-SPEED_STEP)
 
     else:
-        print(f"Unknown input: '{line}'. Valid: e, c, p, w/s/a/d <ms>, x, +/-, rb/rs/re/rg/rv/rh")
+        print(f"Unknown input: '{line}'. Valid: e, n, c, p, w/s/a/d <ms>, x, +/-, rb/rs/re/rg/rv/rh")
 
 
 def _processSerial():
@@ -391,7 +401,7 @@ def runRawDriveMode():
     """Raw drive mode: WASD keys move instantly, no Enter required."""
     print("\n-- RAW DRIVE MODE --")
     print("  WASD = drive    +/- = speed    e = E-Stop    x = stop")
-    print("  Press 'm' to return to normal mode\n")
+    print("  n = Toggle auto colour    Press 'm' to return to normal mode\n")
 
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
@@ -402,7 +412,7 @@ def runRawDriveMode():
             _processSerial()
 
             now = time.time()
-            if COLOR_ENABLED and (now - _last_color_time) >= 6.0:
+            if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= 6.0:
                 handleColorCommand()
                 _last_color_time = now
 
@@ -424,6 +434,8 @@ def runRawDriveMode():
             elif ch == 'e':
                 print("Sending E-Stop command...")
                 sendCommand(COMMAND_ESTOP, data=b'This is a debug message')
+            elif ch == 'n':
+                toggleAutoColor()
             elif ch == '+':
                 handleSpeedChange(SPEED_STEP)
             elif ch == '-':
@@ -436,7 +448,7 @@ def runCommandInterface():
 
     print("Sensor interface ready. Commands:")
     print(f"  e = E-Stop    c = Color sensor {'(disabled)' if not COLOR_ENABLED else ''}")
-    print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}")
+    print(f"  n = Toggle auto colour (every 6 s)    p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}")
     print("  w <ms> = Forward   s <ms> = Backward")
     print("  a <ms> = Turn left d <ms> = Turn right")
     print("  (duration in ms, default 2000. e.g. 'w 500')")
@@ -448,11 +460,15 @@ def runCommandInterface():
     print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
 
-
+    _last_color_time = 0.0
 
     while True:
         _processSerial()
 
+        now = time.time()
+        if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= 6.0:
+            handleColorCommand()
+            _last_color_time = now
 
         rlist, _, _ = select.select([sys.stdin], [], [], 0)
         if rlist:
