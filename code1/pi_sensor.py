@@ -32,6 +32,7 @@ from packets import *
 
 CAMERA_ENABLED = True
 COLOR_ENABLED  = True
+CAMERA_ROTATE_CCW_90 = True
 
 # ----------------------------------------------------------------
 # SERIAL PORT SETUP
@@ -265,7 +266,10 @@ def handleCameraCommand():
 
     if not isEstopActive(): # estop not active, capture and display max 10 images.
         if _frames_remaining > 0:
-            newImage = alex_camera.captureGreyscaleFrame(_camera)
+            newImage = alex_camera.captureGreyscaleFrame(
+                _camera,
+                rotate_ccw_90=CAMERA_ROTATE_CCW_90,
+            )
             alex_camera.renderGreyscaleFrame(newImage)
             _frames_remaining -= 1
             print(f"Frames remaining: {_frames_remaining}")

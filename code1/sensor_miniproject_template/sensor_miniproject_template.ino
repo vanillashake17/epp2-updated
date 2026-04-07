@@ -224,14 +224,14 @@ ISR(INT1_vect) {
 #define SHLD_MIN 140 //UP
 #define SHLD_MAX 180 // DOWN
 #define ELBW_MIN 0 // DOWN and IN
-#define ELBW_MAX 60 // UP and OUT
+#define ELBW_MAX 50 // UP and OUT
 #define GRIP_MIN 5
 #define GRIP_MAX 33
 
 // default home pose (degrees)
 #define BASE_HOME 180
-#define SHLD_HOME 180
-#define ELBW_HOME 0
+#define SHLD_HOME 140
+#define ELBW_HOME 50
 #define GRIP_HOME 25
 
 // staggered checkpoints within the 20ms period (timer ticks)
