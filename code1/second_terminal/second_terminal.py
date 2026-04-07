@@ -131,6 +131,25 @@ def _unpackFrame(frame: bytes):
 
 _estop_active = False
 
+# Servo timing constants used by the Arduino arm driver.
+# Keep these in sync with sensor_miniproject_template.ino when changed.
+_MIN_PULSE_US = 600
+_MAX_PULSE_US = 2400
+
+
+def _armParamToAngle(value: int) -> int:
+    """Convert ARM response value to degrees.
+
+    Newer firmware may report timer ticks (0.5us each), while older
+    firmware can already report angles. This helper accepts either.
+    """
+    if 0 <= value <= 180:
+        return value
+
+    us = value / 2.0
+    angle = round((us - _MIN_PULSE_US) * 180.0 / (_MAX_PULSE_US - _MIN_PULSE_US))
+    return max(0, min(180, int(angle)))
+
 
 def _printPacket(pkt):
     """Pretty-print a TPacket forwarded from the robot."""
@@ -149,8 +168,11 @@ def _printPacket(pkt):
         elif cmd == RESP_COLOR:
             pass  # colour packets received but not printed
         elif cmd == RESP_ARM:
-            print(f"[robot] Arm angles: B={pkt['params'][0]} S={pkt['params'][1]} "
-                  f"E={pkt['params'][2]} G={pkt['params'][3]}")
+            b = _armParamToAngle(pkt['params'][0])
+            s = _armParamToAngle(pkt['params'][1])
+            e = _armParamToAngle(pkt['params'][2])
+            g = _armParamToAngle(pkt['params'][3])
+            print(f"[robot] Arm angles: B={b} S={s} E={e} G={g}")
         else:
             print(f"[robot] Response: unknown command {cmd}")
         # Print any debug string embedded in the data field.
