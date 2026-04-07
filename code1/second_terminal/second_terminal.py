@@ -63,7 +63,7 @@ from net_utils import TCPClient, sendTPacketFrame, recvTPacketFrame
 # ---------------------------------------------------------------------------
 # Both scripts run on the same Pi, so the host is 'localhost'.
 # Change PI_HOST to the Pi's IP address if you run this from a different machine.
-PI_HOST = 'localhost'
+PI_HOST = '100.79.89.12'
 PI_PORT = 65432
 
 # ---------------------------------------------------------------------------
@@ -131,6 +131,25 @@ def _unpackFrame(frame: bytes):
 
 _estop_active = False
 
+# Servo timing constants used by the Arduino arm driver.
+# Keep these in sync with sensor_miniproject_template.ino when changed.
+_MIN_PULSE_US = 600
+_MAX_PULSE_US = 2400
+
+
+def _armParamToAngle(value: int) -> int:
+    """Convert ARM response value to degrees.
+
+    Newer firmware may report timer ticks (0.5us each), while older
+    firmware can already report angles. This helper accepts either.
+    """
+    if 0 <= value <= 180:
+        return value
+
+    us = value / 2.0
+    angle = round((us - _MIN_PULSE_US) * 180.0 / (_MAX_PULSE_US - _MIN_PULSE_US))
+    return max(0, min(180, int(angle)))
+
 
 def _printPacket(pkt):
     """Pretty-print a TPacket forwarded from the robot."""
@@ -146,9 +165,14 @@ def _printPacket(pkt):
             state         = pkt['params'][0]
             _estop_active = (state == STATE_STOPPED)
             print(f"[robot] Status: {'STOPPED' if _estop_active else 'RUNNING'}")
+        elif cmd == RESP_COLOR:
+            pass  # colour packets received but not printed
         elif cmd == RESP_ARM:
-            print(f"[robot] Arm angles: B={pkt['params'][0]} S={pkt['params'][1]} "
-                  f"E={pkt['params'][2]} G={pkt['params'][3]}")
+            b = _armParamToAngle(pkt['params'][0])
+            s = _armParamToAngle(pkt['params'][1])
+            e = _armParamToAngle(pkt['params'][2])
+            g = _armParamToAngle(pkt['params'][3])
+            print(f"[robot] Arm angles: B={b} S={s} E={e} G={g}")
         else:
             print(f"[robot] Response: unknown command {cmd}")
         # Print any debug string embedded in the data field.
@@ -226,6 +250,11 @@ def run():
 
     print("[second_terminal] Connected!")
     print("[second_terminal] Commands:  e = E-Stop  b/s/e/g/vNNN = arm  h = home arm  q = quit")
+    print("[second_terminal] Servo limits:")
+    print("  Base (b):     0 - 175")
+    print("  Shoulder (s): 140 (up) - 180 (down)")
+    print("  Elbow (e):    0 (down/in) - 60 (up/out)")
+    print("  Gripper (g):  5 (open) - 35 (closed)")
     print("[second_terminal] Incoming robot packets will be printed below.\n")
 
     try:

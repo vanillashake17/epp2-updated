@@ -74,7 +74,7 @@ def captureFrame(cam):
     return raw[:, :, [2, 1, 0]]
 
 
-def captureGreyscaleFrame(cam):
+def captureGreyscaleFrame(cam, rotate_ccw_90=True):
     """
     Capture a single still frame converted to greyscale.
 
@@ -82,15 +82,16 @@ def captureGreyscaleFrame(cam):
 
     Args:
         cam: A Picamera2 instance returned by cameraOpen().
+        rotate_ccw_90: If True, rotate the frame 90 degrees counterclockwise.
 
     Returns:
         A numpy array of shape (RENDER_HEIGHT, RENDER_WIDTH), dtype uint8.
     """
     import numpy as np
     rgb = captureFrame(cam)
-    grey = (0.299 * rgb[:, :, 0] +
-            0.587 * rgb[:, :, 1] +
-            0.114 * rgb[:, :, 2]).astype(np.uint8)
+    grey = (0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]).astype(np.uint8)
+    if rotate_ccw_90:
+        grey = np.rot90(grey, k=3)
     return grey
 
 
