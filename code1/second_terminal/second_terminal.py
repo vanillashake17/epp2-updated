@@ -130,7 +130,6 @@ def _unpackFrame(frame: bytes):
 # ---------------------------------------------------------------------------
 
 _estop_active = False
-_print_color = True
 
 # Servo timing constants used by the Arduino arm driver.
 # Keep these in sync with sensor_miniproject_template.ino when changed.
@@ -167,11 +166,7 @@ def _printPacket(pkt):
             _estop_active = (state == STATE_STOPPED)
             print(f"[robot] Status: {'STOPPED' if _estop_active else 'RUNNING'}")
         elif cmd == RESP_COLOR:
-            if _print_color:
-                r = pkt['params'][0]
-                g = pkt['params'][1]
-                b = pkt['params'][2]
-                print(f"[robot] Color: R={r} Hz, G={g} Hz, B={b} Hz")
+            pass  # colour packets received but not printed
         elif cmd == RESP_ARM:
             b = _armParamToAngle(pkt['params'][0])
             s = _armParamToAngle(pkt['params'][1])
@@ -199,7 +194,6 @@ def _printPacket(pkt):
 
 def _handleInput(line: str, client: TCPClient):
     """Handle one line of keyboard input."""
-    global _print_color
     line = line.strip().lower()
     if not line:
         return
@@ -208,10 +202,6 @@ def _handleInput(line: str, client: TCPClient):
         frame = _packFrame(PACKET_TYPE_COMMAND, COMMAND_ESTOP)
         sendTPacketFrame(client.sock, frame)
         print("[second_terminal] Sent: E-STOP")
-
-    elif line == 'm':
-        _print_color = not _print_color
-        print(f"[second_terminal] Color printing: {'ON' if _print_color else 'OFF'}")
 
     elif len(line) >= 2 and line[0] in 'bsegv' and line[1:].isdigit():
         cmd_char = line[0].upper()
@@ -234,7 +224,7 @@ def _handleInput(line: str, client: TCPClient):
 
     else:
         print(f"[second_terminal] Unknown: '{line}'.  "
-              f"Valid: e (E-Stop)  m (toggle color)  b/s/e/g/vNNN (arm)  h (home arm)  q (quit)")
+              f"Valid: e (E-Stop)  b/s/e/g/vNNN (arm)  h (home arm)  q (quit)")
 
 
 # ---------------------------------------------------------------------------
@@ -259,12 +249,12 @@ def run():
         sys.exit(1)
 
     print("[second_terminal] Connected!")
-    print("[second_terminal] Commands:  e = E-Stop  m = toggle color  b/s/e/g/vNNN = arm  h = home arm  q = quit")
+    print("[second_terminal] Commands:  e = E-Stop  b/s/e/g/vNNN = arm  h = home arm  q = quit")
     print("[second_terminal] Servo limits:")
-    print("  Base (b):     130 - 180")
+    print("  Base (b):     0 - 175")
     print("  Shoulder (s): 140 (up) - 180 (down)")
-    print("  Elbow (e):    0 (down/in) - 50 (up/out)")
-    print("  Gripper (g):  5 (open) - 33 (closed)")
+    print("  Elbow (e):    0 (down/in) - 60 (up/out)")
+    print("  Gripper (g):  5 (open) - 35 (closed)")
     print("[second_terminal] Incoming robot packets will be printed below.\n")
 
     try:

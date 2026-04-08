@@ -201,7 +201,6 @@ def _armTicksToAngle(value: int) -> int:
 
 def printPacket(pkt):
     global _estop_state
-    global _print_color
     ptype = pkt['packetType']
     cmd   = pkt['command']
 
@@ -217,11 +216,10 @@ def printPacket(pkt):
                 print("Status: STOPPED")
 
         elif cmd == RESP_COLOR:
-            if getattr(sys.modules[__name__], '_print_color', False):
-                r = pkt['params'][0]
-                g = pkt['params'][1]
-                b = pkt['params'][2]
-                print(f"R: {r} Hz, G: {g} Hz, B: {b} Hz")
+            r = pkt['params'][0]
+            g = pkt['params'][1]
+            b = pkt['params'][2]
+            print(f"R: {r} Hz, G: {g} Hz, B: {b} Hz")
 
         elif cmd == RESP_ARM:
             labels = ['Base', 'Shoulder', 'Elbow', 'Gripper']
@@ -306,19 +304,12 @@ _motor_speed = 200   # current speed (0-255)
 SPEED_STEP   = 25    # how much +/- changes the speed
 RAW_MOVE_MS  = 100   # duration per keypress in raw drive mode
 _auto_color  = False # auto-print colour every 6 s when True
-_print_color = False # print colour data on this terminal
 
 
 def toggleAutoColor():
     global _auto_color
     _auto_color = not _auto_color
     print(f"Auto colour: {'ON' if _auto_color else 'OFF'}")
-
-
-def togglePrintColor():
-    global _print_color
-    _print_color = not _print_color
-    print(f"Print colour data on pi: {'ON' if _print_color else 'OFF'}")
 
 
 def handleMovementCommand(direction, duration_ms):
@@ -426,7 +417,7 @@ def runRawDriveMode():
     """Raw drive mode: WASD keys move instantly, no Enter required."""
     print("\n-- RAW DRIVE MODE --")
     print("  WASD = drive    +/- = speed    e = E-Stop    x = stop")
-    print("  n = Toggle auto colour    m = Toggle colour printing    Press 'i' to return to normal mode\n")
+    print("  n = Toggle auto colour    Press 'm' to return to normal mode\n")
 
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
@@ -447,12 +438,9 @@ def runRawDriveMode():
 
             ch = sys.stdin.read(1).lower()
 
-            if ch == 'i':
+            if ch == 'm':
                 print("\n-- NORMAL MODE --")
                 return
-
-            if ch == 'm':
-                togglePrintColor()
 
             if ch in ('w', 'a', 's', 'd'):
                 handleMovementCommand(ch, RAW_MOVE_MS)
@@ -482,14 +470,11 @@ def runCommandInterface():
     print("  (duration in ms, default 2000. e.g. 'w 500')")
     print("  x = Stop robot")
     print(f"  +/- = Speed up/down  (current: {_motor_speed})")
-    print("  i = Raw drive mode (WASD instant control)")
-    print("  m = Toggle colour printing")
+    print("  m = Raw drive mode (WASD instant control)")
     print("  rb <0-175> = Base   rs <140-180> = Shoulder")
     print("  re <0-180> = Elbow  rg <5-40> = Gripper")
     print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
-
-    runRawDriveMode()
 
     _last_color_time = 0.0
 
@@ -507,11 +492,8 @@ def runCommandInterface():
             if not line:
                 time.sleep(0.05)
                 continue
-            if line == 'i':
+            if line == 'm':
                 runRawDriveMode()
-                continue
-            elif line == 'm':
-                togglePrintColor()
                 continue
             handleUserInput(line)
 
