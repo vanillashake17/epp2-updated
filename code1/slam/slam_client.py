@@ -69,11 +69,11 @@ MAX_DIST_MM = 12000
 
 # SLAM map dimensions.
 MAP_PIXELS = 500        # pixels per side of the square map
-MAP_METERS = 5          # real-world metres covered by the map
+MAP_METERS = 7          # real-world metres covered by the map
 MAP_MM = MAP_METERS * 1000
 
 # BreezySLAM quality parameter (1 = cautious, 10 = aggressive).
-MAP_QUALITY = 5
+MAP_QUALITY = 8
 
 # Gap size (mm) that SLAM treats as a continuous wall.
 HOLE_WIDTH_MM = 100
