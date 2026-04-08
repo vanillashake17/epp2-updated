@@ -221,7 +221,7 @@ ISR(INT1_vect) {
 // empirically tested servo limits (degrees)
 #define BASE_MIN 130
 #define BASE_MAX 180
-#define SHLD_MIN 140
+#define SHLD_MIN 110
 #define SHLD_MAX 180
 #define ELBW_MIN 0
 #define ELBW_MAX 50
@@ -230,7 +230,7 @@ ISR(INT1_vect) {
 
 // default home pose (degrees)
 #define BASE_HOME 180
-#define SHLD_HOME 180
+#define SHLD_HOME 110
 #define ELBW_HOME 50
 #define GRIP_HOME 25
 
