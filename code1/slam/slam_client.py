@@ -65,10 +65,10 @@ SCAN_RATE_HZ = 5
 # Full 360-degree field of view.
 SCAN_FOV_DEG = 360
 # Distances beyond this are treated as "no obstacle" (12 m).
-MAX_DIST_MM = 12000
+MAX_DIST_MM = 4000
 
 # SLAM map dimensions.
-MAP_PIXELS = 500        # pixels per side of the square map
+MAP_PIXELS = 1200        # pixels per side of the square map
 MAP_METERS = 7          # real-world metres covered by the map
 MAP_MM = MAP_METERS * 1000
 
