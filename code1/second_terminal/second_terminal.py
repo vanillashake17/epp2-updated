@@ -166,7 +166,10 @@ def _printPacket(pkt):
             _estop_active = (state == STATE_STOPPED)
             print(f"[robot] Status: {'STOPPED' if _estop_active else 'RUNNING'}")
         elif cmd == RESP_COLOR:
-            pass  # colour packets received but not printed
+            r = pkt['params'][0]
+            g = pkt['params'][1]
+            b = pkt['params'][2]
+            print(f"[robot] R: {r} Hz, G: {g} Hz, B: {b} Hz")
         elif cmd == RESP_ARM:
             b = _armParamToAngle(pkt['params'][0])
             s = _armParamToAngle(pkt['params'][1])
