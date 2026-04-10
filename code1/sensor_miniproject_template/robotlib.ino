@@ -2,11 +2,11 @@
 // Direction values
 typedef enum dir
 {
-  STOP,
-  GO,
-  BACK,
-  CCW,
-  CW
+	STOP,
+	GO,
+	BACK,
+	CCW,
+	CW
 } dir;
 
 // Motor control
@@ -22,71 +22,71 @@ AF_DCMotor motorBR(BACK_RIGHT);
 
 void move(int speed, int direction)
 {
-  
-  motorFL.setSpeed(speed);
-  motorFR.setSpeed(speed);
-  motorBL.setSpeed(speed);
-  motorBR.setSpeed(speed);
 
-  switch(direction)
-    {
-      case BACK:
-        motorFL.run(BACKWARD);
-        motorFR.run(BACKWARD);
-        motorBL.run(FORWARD);
-        motorBR.run(FORWARD); 
-      break;
-      case GO:
-        motorFL.run(FORWARD);
-        motorFR.run(FORWARD);
-        motorBL.run(BACKWARD);
-        motorBR.run(BACKWARD); 
-      break;
-      case CW:
-        // Turn right: left wheels forward, right wheels backward
-        motorFL.run(FORWARD);
-        motorFR.run(FORWARD);
-        motorBL.run(FORWARD);
-        motorBR.run(FORWARD);
-      break;
-      case CCW:
-        // Turn left: left wheels backward, right wheels forward
-        motorFL.run(BACKWARD);
-        motorFR.run(BACKWARD);
-        motorBL.run(BACKWARD);
-        motorBR.run(BACKWARD);
-      break;
-      case STOP:
-      default:
-        motorFL.run(RELEASE);
-        motorFR.run(RELEASE);
-        motorBL.run(RELEASE);
-        motorBR.run(RELEASE); 
-    }
+	motorFL.setSpeed(speed);
+	motorFR.setSpeed(speed);
+	motorBL.setSpeed(speed);
+	motorBR.setSpeed(speed);
+
+	switch(direction)
+	{
+		case BACK:
+			motorFL.run(BACKWARD);
+			motorFR.run(BACKWARD);
+			motorBL.run(FORWARD);
+			motorBR.run(FORWARD); 
+			break;
+		case GO:
+			motorFL.run(FORWARD);
+			motorFR.run(FORWARD);
+			motorBL.run(BACKWARD);
+			motorBR.run(BACKWARD); 
+			break;
+		case CW:
+			// Turn right: left wheels forward, right wheels backward
+			motorFL.run(FORWARD);
+			motorFR.run(FORWARD);
+			motorBL.run(FORWARD);
+			motorBR.run(FORWARD);
+			break;
+		case CCW:
+			// Turn left: left wheels backward, right wheels forward
+			motorFL.run(BACKWARD);
+			motorFR.run(BACKWARD);
+			motorBL.run(BACKWARD);
+			motorBR.run(BACKWARD);
+			break;
+		case STOP:
+		default:
+			motorFL.run(RELEASE);
+			motorFR.run(RELEASE);
+			motorBL.run(RELEASE);
+			motorBR.run(RELEASE); 
+	}
 }
 
 void forward(int speed)
 {
-  move(speed, GO);
+	move(speed, GO);
 }
 
 void backward(int speed)
 {
-  move(speed, BACK);
+	move(speed, BACK);
 }
 
 void ccw(int speed)
 {
-  move(speed, CCW);
+	move(speed, CCW);
 }
 
 void cw(int speed)
 {
-  move(speed, CW);
+	move(speed, CW);
 }
 
 void stop()
 {
-  move(0, STOP);
+	move(0, STOP);
 }
 
