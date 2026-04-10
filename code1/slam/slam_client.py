@@ -41,6 +41,7 @@ for _backend in ['TkAgg', 'Qt5Agg', 'GTK3Agg', 'WXAgg', 'Agg']:
         continue
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 import numpy as np
 
 # ---------------------------------------------------------------------------
@@ -87,6 +88,14 @@ MIN_VALID_POINTS = 150
 # ---------------------------------------------------------------------------
 UPDATE_INTERVAL_MS = 100   # matplotlib animation interval (ms)
 POINT_SIZE = 2             # LiDAR point cloud dot size
+
+# Robot footprint (metres) — drawn as a rotating rectangle on the map.
+# SLAM reports the LIDAR position; the LIDAR is mounted at the 0-11 cm mark
+# from the front of the robot (centre ≈ 55 mm from front edge).
+ROBOT_LENGTH_M = 0.320     # fore-aft dimension
+ROBOT_WIDTH_M  = 0.170     # left-right dimension
+LIDAR_TO_FRONT_M = 0.055   # distance from LIDAR centre to front edge
+LIDAR_TO_BACK_M  = ROBOT_LENGTH_M - LIDAR_TO_FRONT_M  # 0.265 m
 
 # ---------------------------------------------------------------------------
 # Networking defaults
@@ -153,7 +162,14 @@ def run(host: str, port: int = DEFAULT_PORT):
         extent=[0, MAP_METERS, 0, MAP_METERS],
         vmin=0, vmax=255,
     )
-    robot_dot,  = ax_map.plot([], [], 'bo', markersize=8, label='robot')
+    # Robot footprint rectangle — corners updated in-place each frame.
+    robot_patch = Polygon(
+        np.zeros((4, 2)),
+        closed=True,
+        edgecolor='blue', facecolor='blue', alpha=0.35,
+        linewidth=1.5, label='robot',
+    )
+    ax_map.add_patch(robot_patch)
     # Quiver arrow for robot heading — updated in-place each frame.
     robot_quiver = ax_map.quiver(
         [0], [0], [0], [0.15],
@@ -255,14 +271,39 @@ def run(host: str, port: int = DEFAULT_PORT):
 
                 x_m = x_mm / 1000.0
                 y_m = y_mm / 1000.0
-                robot_dot.set_data([MAP_METERS - y_m], [x_m])
 
                 theta_rad = math.radians(theta_deg)
+                # Robot forward unit vector in screen frame (matches the quiver
+                # arrow below). When theta=0 the robot faces screen +y.
+                fx = -math.sin(theta_rad)
+                fy =  math.cos(theta_rad)
+                # Right-side unit vector (forward rotated -90 degrees).
+                rx =  fy
+                ry = -fx
+
+                # (cx, cy) is the LIDAR position on screen, not the robot
+                # centre.  The rectangle extends LIDAR_TO_FRONT_M forward and
+                # LIDAR_TO_BACK_M backward from this point.
+                cx = MAP_METERS - y_m
+                cy = x_m
+                half_wid = ROBOT_WIDTH_M / 2.0
+                corners = np.array([
+                    [cx + LIDAR_TO_FRONT_M * fx - half_wid * rx,
+                     cy + LIDAR_TO_FRONT_M * fy - half_wid * ry],  # front-left
+                    [cx + LIDAR_TO_FRONT_M * fx + half_wid * rx,
+                     cy + LIDAR_TO_FRONT_M * fy + half_wid * ry],  # front-right
+                    [cx - LIDAR_TO_BACK_M  * fx + half_wid * rx,
+                     cy - LIDAR_TO_BACK_M  * fy + half_wid * ry],  # back-right
+                    [cx - LIDAR_TO_BACK_M  * fx - half_wid * rx,
+                     cy - LIDAR_TO_BACK_M  * fy - half_wid * ry],  # back-left
+                ])
+                robot_patch.set_xy(corners)
+
                 arrow_len = 0.15
-                robot_quiver.set_offsets([[MAP_METERS - y_m, x_m]])
+                robot_quiver.set_offsets([[cx, cy]])
                 robot_quiver.set_UVC(
-                    [-arrow_len * math.sin(theta_rad)],
-                    [arrow_len * math.cos(theta_rad)],
+                    [arrow_len * fx],
+                    [arrow_len * fy],
                 )
 
                 px, py = _scan_to_xy(last_distances, last_angles)
