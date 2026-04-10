@@ -34,3 +34,55 @@ To avoid overloading the Raspberry Pi with heavy algorithms, the SLAM map genera
 ### 4. Vision
 
 - **`code1/alex_camera.py`**: Connects to the Pi Camera module, conditionally capturing pictures based on an allowed budget limit per mission, and condensing them into an 80x44 greyscale ASCII block output directly in the terminal interface.
+
+## Pin Mapping (Arduino Mega 2560)
+
+### Color Sensor (TCS3200)
+
+| Arduino Digital Pin | ATmega2560 Port/Pin | Function |
+|---|---|---|
+| D22 | PA0 | S0 (Frequency Scaling) |
+| D23 | PA1 | S1 (Frequency Scaling) |
+| D24 | PA2 | S2 (Photodiode Select) |
+| D25 | PA3 | S3 (Photodiode Select) |
+| D26 | PA4 | Sensor OUT (Frequency Output) |
+
+### E-Stop Button
+
+| Arduino Digital Pin | ATmega2560 Port/Pin | Function |
+|---|---|---|
+| D20 (INT1) | PD1 | E-Stop Push Button (External Interrupt 1) |
+
+### Robot Arm Servos
+
+| Arduino Digital Pin | ATmega2560 Port/Pin | Function |
+|---|---|---|
+| D37 | PC0 | Base Servo Signal |
+| D36 | PC1 | Shoulder Servo Signal |
+| D35 | PC2 | Gripper Servo Signal |
+| D33 | PC4 | Elbow Servo Signal |
+
+### Motor Shield (Adafruit Motor Shield v1)
+
+| Arduino Digital Pin | Function |
+|---|---|
+| D4, D7, D8, D12 | 74HC595 Shift Register (Motor Direction Control) |
+| D3, D11 | PWM Speed Control (DC Motors) |
+
+### Serial
+
+| Arduino Digital Pin | ATmega2560 Port/Pin | Function |
+|---|---|---|
+| D0 (RX0) | PE0 | USART0 RX (Serial to Raspberry Pi) |
+| D1 (TX0) | PE1 | USART0 TX (Serial to Raspberry Pi) |
+
+## Interrupts & Timers
+
+| Resource | Type | Purpose | Configuration |
+|---|---|---|---|
+| INT1 | External Interrupt | E-Stop button debounce & state machine | Triggers on any logical change (`ISC10`); reads PD1 pin state |
+| Timer 2 | 8-bit Timer (CTC) | Color sensor measurement time-base | Prescaler 8, OCR2A = 199 → 100 µs tick; `TIMER2_COMPA_vect` increments `_timerTicks` |
+| Timer 5 | 16-bit Timer (CTC) | Robot arm servo PWM (4-channel staggered) | Prescaler 8, OCR5A = 39999 → 20 ms period; `TIMER5_COMPA_vect` runs servo lerp, `TIMER5_COMPB_vect` generates staggered pulses |
+| USART0 RX | Peripheral Interrupt | Bare-metal serial receive | `USART0_RX_vect` ISR enqueues bytes into circular `rx_buf` |
+| USART0 UDRE | Peripheral Interrupt | Bare-metal serial transmit | `USART0_UDRE_vect` ISR dequeues bytes from circular `tx_buf`; auto-disables when empty |
+| Timers 1, 3, 4 | Hardware Timers | AFMotor library (motor PWM) | Reserved by the Adafruit Motor Shield v1 library for DC motor speed control; not available for user code |
