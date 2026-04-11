@@ -452,6 +452,8 @@ def runRawDriveMode():
                 sendCommand(COMMAND_ESTOP, data=b'This is a debug message')
             elif ch == 'n':
                 toggleAutoColor()
+            elif ch == 'p':
+                handleCameraCommand()
             elif ch == '+':
                 handleSpeedChange(SPEED_STEP)
             elif ch == '-':
