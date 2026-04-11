@@ -161,7 +161,7 @@ def _printPacket(pkt):
 
     if ptype == PACKET_TYPE_RESPONSE:
         if cmd == RESP_OK:
-            print("[robot] OK")
+            pass
         elif cmd == RESP_STATUS:
             state         = pkt['params'][0]
             _estop_active = (state == STATE_STOPPED)
@@ -172,6 +172,15 @@ def _printPacket(pkt):
                 g = pkt['params'][1]
                 b = pkt['params'][2]
                 print(f"[robot] R: {r} Hz, G: {g} Hz, B: {b} Hz")
+                if r > 9000 and g < 5000 and b < 5000:
+                    label = "RED"
+                elif g > 5000 and r < 5000 and b < 5000:
+                    label = "GREEN"
+                elif b > 9000 and r < 8000 and g < 8000:
+                    label = "BLUE"
+                else:
+                    label = "FLOOR"
+                print(f"[robot] Colour: {label}")
         elif cmd == RESP_ARM:
             b = _armParamToAngle(pkt['params'][0])
             s = _armParamToAngle(pkt['params'][1])

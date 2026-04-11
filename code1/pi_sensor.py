@@ -506,12 +506,13 @@ def runCommandInterface():
     runRawDriveMode()
 
     _last_color_time = 0.0
+    color_sensor_interval = 5.0
 
     while True:
         _processSerial()
 
         now = time.time()
-        if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= 6.0:
+        if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= color_sensor_interval:
             handleColorCommand()
             _last_color_time = now
 
