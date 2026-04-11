@@ -172,6 +172,7 @@ def sendCommand(commandType, data=b'', params=None):
 # ----------------------------------------------------------------
 
 _estop_state = STATE_RUNNING
+_pending_color_response = False
 
 
 def isEstopActive():
@@ -200,13 +201,16 @@ def _armTicksToAngle(value: int) -> int:
 
 
 def printPacket(pkt):
-    global _estop_state
+    global _estop_state, _pending_color_response
     ptype = pkt['packetType']
     cmd   = pkt['command']
 
     if ptype == PACKET_TYPE_RESPONSE:
         if cmd == RESP_OK:
-            print("Response: OK")
+            if _pending_color_response:
+                _pending_color_response = False
+            else:
+                print("Response: OK")
         elif cmd == RESP_STATUS:
             state = pkt['params'][0]
             _estop_state = state
@@ -216,6 +220,7 @@ def printPacket(pkt):
                 print("Status: STOPPED")
 
         elif cmd == RESP_COLOR:
+            _pending_color_response = False
             if _print_color:
                 r = pkt['params'][0]
                 g = pkt['params'][1]
@@ -246,6 +251,8 @@ def printPacket(pkt):
 # ----------------------------------------------------------------
 
 def handleColorCommand():
+    global _pending_color_response
+
     if not COLOR_ENABLED:
         print("Color sensor not enabled.")
         return
@@ -254,6 +261,7 @@ def handleColorCommand():
         return
 
     print("Requesting color sensor reading...")
+    _pending_color_response = True
     sendCommand(COMMAND_COLOR)
 
 
