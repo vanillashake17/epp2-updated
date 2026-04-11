@@ -130,6 +130,7 @@ def _unpackFrame(frame: bytes):
 # ---------------------------------------------------------------------------
 
 _estop_active = False
+_print_color  = True   # print colour responses (on by default on second terminal)
 
 # Servo timing constants used by the Arduino arm driver.
 # Keep these in sync with sensor_miniproject_template.ino when changed.
@@ -166,10 +167,11 @@ def _printPacket(pkt):
             _estop_active = (state == STATE_STOPPED)
             print(f"[robot] Status: {'STOPPED' if _estop_active else 'RUNNING'}")
         elif cmd == RESP_COLOR:
-            r = pkt['params'][0]
-            g = pkt['params'][1]
-            b = pkt['params'][2]
-            print(f"[robot] R: {r} Hz, G: {g} Hz, B: {b} Hz")
+            if _print_color:
+                r = pkt['params'][0]
+                g = pkt['params'][1]
+                b = pkt['params'][2]
+                print(f"[robot] R: {r} Hz, G: {g} Hz, B: {b} Hz")
         elif cmd == RESP_ARM:
             b = _armParamToAngle(pkt['params'][0])
             s = _armParamToAngle(pkt['params'][1])
@@ -206,6 +208,11 @@ def _handleInput(line: str, client: TCPClient):
         sendTPacketFrame(client.sock, frame)
         print("[second_terminal] Sent: E-STOP")
 
+    elif line == 'n':
+        global _print_color
+        _print_color = not _print_color
+        print(f"[second_terminal] Print colour: {'ON' if _print_color else 'OFF'}")
+
     elif len(line) >= 2 and line[0] in 'bsegv' and line[1:].isdigit():
         cmd_char = line[0].upper()
         val = int(line[1:])
@@ -227,7 +234,8 @@ def _handleInput(line: str, client: TCPClient):
 
     else:
         print(f"[second_terminal] Unknown: '{line}'.  "
-              f"Valid: e (E-Stop)  b/s/e/g/vNNN (arm)  h (home arm)  q (quit)")
+              f"Valid: e (E-Stop)  n (toggle print)  "
+              f"b/s/e/g/vNNN (arm)  h (home arm)  q (quit)")
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +260,8 @@ def run():
         sys.exit(1)
 
     print("[second_terminal] Connected!")
-    print("[second_terminal] Commands:  e = E-Stop  b/s/e/g/vNNN = arm  h = home arm  q = quit")
+    print("[second_terminal] Commands:  e = E-Stop  n = Toggle colour printing")
+    print("[second_terminal]           b/s/e/g/vNNN = arm  h = home arm  q = quit")
     print("[second_terminal] Servo limits:")
     print("  Base (b):     0 - 175")
     print("  Shoulder (s): 140 (up) - 180 (down)")

@@ -172,6 +172,7 @@ def sendCommand(commandType, data=b'', params=None):
 # ----------------------------------------------------------------
 
 _estop_state = STATE_RUNNING
+_pending_color_response = False
 
 
 def isEstopActive():
@@ -200,13 +201,16 @@ def _armTicksToAngle(value: int) -> int:
 
 
 def printPacket(pkt):
-    global _estop_state
+    global _estop_state, _pending_color_response
     ptype = pkt['packetType']
     cmd   = pkt['command']
 
     if ptype == PACKET_TYPE_RESPONSE:
         if cmd == RESP_OK:
-            print("Response: OK")
+            if _pending_color_response:
+                _pending_color_response = False
+            else:
+                print("Response: OK")
         elif cmd == RESP_STATUS:
             state = pkt['params'][0]
             _estop_state = state
@@ -216,10 +220,12 @@ def printPacket(pkt):
                 print("Status: STOPPED")
 
         elif cmd == RESP_COLOR:
-            r = pkt['params'][0]
-            g = pkt['params'][1]
-            b = pkt['params'][2]
-            print(f"R: {r} Hz, G: {g} Hz, B: {b} Hz")
+            _pending_color_response = False
+            if _print_color:
+                r = pkt['params'][0]
+                g = pkt['params'][1]
+                b = pkt['params'][2]
+                print(f"R: {r} Hz, G: {g} Hz, B: {b} Hz")
 
         elif cmd == RESP_ARM:
             labels = ['Base', 'Shoulder', 'Elbow', 'Gripper']
@@ -245,6 +251,8 @@ def printPacket(pkt):
 # ----------------------------------------------------------------
 
 def handleColorCommand():
+    global _pending_color_response
+
     if not COLOR_ENABLED:
         print("Color sensor not enabled.")
         return
@@ -253,6 +261,7 @@ def handleColorCommand():
         return
 
     print("Requesting color sensor reading...")
+    _pending_color_response = True
     sendCommand(COMMAND_COLOR)
 
 
@@ -300,16 +309,23 @@ def handleCameraCommand():
 # COMMAND-LINE INTERFACE
 # ----------------------------------------------------------------
 
-_motor_speed = 200   # current speed (0-255)
-SPEED_STEP   = 25    # how much +/- changes the speed
-RAW_MOVE_MS  = 100   # duration per keypress in raw drive mode
-_auto_color  = False # auto-print colour every 6 s when True
+_motor_speed   = 200   # current speed (0-255)
+SPEED_STEP     = 25    # how much +/- changes the speed
+RAW_MOVE_MS    = 100   # duration per keypress in raw drive mode
+_auto_color    = False # auto-request colour every 6 s when True
+_print_color   = False # print colour responses (off by default; use second terminal)
 
 
 def toggleAutoColor():
     global _auto_color
     _auto_color = not _auto_color
     print(f"Auto colour: {'ON' if _auto_color else 'OFF'}")
+
+
+def togglePrintColor():
+    global _print_color
+    _print_color = not _print_color
+    print(f"Print colour: {'ON' if _print_color else 'OFF'}")
 
 
 def handleMovementCommand(direction, duration_ms):
@@ -362,8 +378,11 @@ def handleUserInput(line):
         print("Sending E-Stop command...")
         sendCommand(COMMAND_ESTOP, data=b'This is a debug message')
 
-    elif line == 'n':
+    elif line == 't':
         toggleAutoColor()
+
+    elif line == 'n':
+        togglePrintColor()
 
     elif line == 'c':
         handleColorCommand()
@@ -399,7 +418,7 @@ def handleUserInput(line):
         handleSpeedChange(-SPEED_STEP)
 
     else:
-        print(f"Unknown input: '{line}'. Valid: e, n, c, p, w/s/a/d <ms>, x, +/-, rb/rs/re/rg/rv/rh")
+        print(f"Unknown input: '{line}'. Valid: e, t, n, c, p, w/s/a/d <ms>, x, +/-, rb/rs/re/rg/rv/rh")
 
 
 def _processSerial():
@@ -417,7 +436,8 @@ def runRawDriveMode():
     """Raw drive mode: WASD keys move instantly, no Enter required."""
     print("\n-- RAW DRIVE MODE --")
     print("  WASD = drive    +/- = speed    e = E-Stop    x = stop")
-    print("  n = Toggle auto colour    Press 'm' to return to normal mode\n")
+    print("  c = Colour    p = Camera    t = Auto colour (6s)")
+    print("  n = Toggle colour printing    m = Normal input mode\n")
 
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
@@ -450,8 +470,12 @@ def runRawDriveMode():
             elif ch == 'e':
                 print("Sending E-Stop command...")
                 sendCommand(COMMAND_ESTOP, data=b'This is a debug message')
-            elif ch == 'n':
+            elif ch == 'c':
+                handleColorCommand()
+            elif ch == 't':
                 toggleAutoColor()
+            elif ch == 'n':
+                togglePrintColor()
             elif ch == 'p':
                 handleCameraCommand()
             elif ch == '+':
@@ -466,17 +490,20 @@ def runCommandInterface():
 
     print("Sensor interface ready. Commands:")
     print(f"  e = E-Stop    c = Color sensor {'(disabled)' if not COLOR_ENABLED else ''}")
-    print(f"  n = Toggle auto colour (every 6 s)    p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}")
+    print(f"  t = Auto colour (6s)    n = Toggle colour printing")
+    print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}")
     print("  w <ms> = Forward   s <ms> = Backward")
     print("  a <ms> = Turn left d <ms> = Turn right")
     print("  (duration in ms, default 2000. e.g. 'w 500')")
     print("  x = Stop robot")
     print(f"  +/- = Speed up/down  (current: {_motor_speed})")
-    print("  m = Raw drive mode (WASD instant control)")
+    print("  m = Normal input mode (line-based)")
     print("  rb <0-175> = Base   rs <140-180> = Shoulder")
     print("  re <0-180> = Elbow  rg <5-40> = Gripper")
     print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
+
+    runRawDriveMode()
 
     _last_color_time = 0.0
 
