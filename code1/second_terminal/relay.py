@@ -37,8 +37,11 @@ import ssl
 # Configuration
 # ============================================================
 
-SECOND_TERM_PORT    = 65432   # TCP port second_terminal.py connects to
-SECOND_TERM_TIMEOUT = 300     # Seconds to wait for second_terminal.py to connect
+SECOND_TERM_PORT    = 65432            # TCP port second_terminal.py connects to
+SECOND_TERM_TIMEOUT = 300              # seconds to wait for second_terminal.py to connect
+TLS_ENABLED         = True             # enable TLS encryption on the relay
+TLS_CERT_PATH       = 'certs/server.crt'  # path to server certificate
+TLS_KEY_PATH        = 'certs/server.key'  # path to server private key
 
 
 # ============================================================
@@ -52,9 +55,6 @@ _st_conn   = None   # Active client socket from second_terminal.py
 # ============================================================
 # Second terminal relay
 # ============================================================
-TLS_ENABLED = True
-TLS_CERT_PATH = 'certs/server.crt'
-TLS_KEY_PATH = 'certs/server.key'
 
 
 def _make_server_ssl_context():

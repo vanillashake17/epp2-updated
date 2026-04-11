@@ -82,8 +82,10 @@ TLS_CERT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 TPACKET_SIZE = 1 + 1 + 2 + MAX_STR_LEN + (PARAMS_COUNT * 4)   # = 100
 TPACKET_FMT  = f'<BB2x{MAX_STR_LEN}s{PARAMS_COUNT}I'
 
-MAGIC      = b'\xDE\xAD'
-FRAME_SIZE = len(MAGIC) + TPACKET_SIZE + 1   # = 103
+MAGIC         = b'\xDE\xAD'
+FRAME_SIZE    = len(MAGIC) + TPACKET_SIZE + 1   # = 103
+_MIN_PULSE_US = 600    # servo min pulse width (sync with .ino)
+_MAX_PULSE_US = 2400   # servo max pulse width (sync with .ino)
 
 
 # ---------------------------------------------------------------------------
@@ -131,11 +133,6 @@ def _unpackFrame(frame: bytes):
 
 _estop_active = False
 _print_color  = True   # print colour responses (on by default on second terminal)
-
-# Servo timing constants used by the Arduino arm driver.
-# Keep these in sync with sensor_miniproject_template.ino when changed.
-_MIN_PULSE_US = 600
-_MAX_PULSE_US = 2400
 
 
 def _armParamToAngle(value: int) -> int:

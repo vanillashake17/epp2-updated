@@ -30,8 +30,8 @@ from packets import *
 # FEATURE FLAGS — set to False if a component is not connected
 # ----------------------------------------------------------------
 
-CAMERA_ENABLED = True
-COLOR_ENABLED  = True
+CAMERA_ENABLED       = True
+COLOR_ENABLED        = True
 CAMERA_ROTATE_CCW_90 = True
 
 # ----------------------------------------------------------------
@@ -40,6 +40,18 @@ CAMERA_ROTATE_CCW_90 = True
 
 PORT     = "/dev/ttyACM0"
 BAUDRATE = 9600
+
+# ----------------------------------------------------------------
+# CONSTANTS
+# ----------------------------------------------------------------
+
+_ARM_MIN_PULSE_US     = 600    # servo min pulse width (sync with .ino)
+_ARM_MAX_PULSE_US     = 2400   # servo max pulse width (sync with .ino)
+_MOTOR_SPEED_DEFAULT  = 200    # initial motor speed (0-255)
+SPEED_STEP            = 25     # how much +/- changes the speed
+RAW_MOVE_MS           = 100    # duration per keypress in raw drive mode
+COLOR_SENSOR_INTERVAL = 5.0    # seconds between auto colour requests
+MAX_CAMERA_FRAMES     = 10     # frames before further captures are refused
 
 _ser = None
 
@@ -184,10 +196,6 @@ def isEstopActive():
 # PACKET DISPLAY
 # ----------------------------------------------------------------
 
-_ARM_MIN_PULSE_US = 600
-_ARM_MAX_PULSE_US = 2400
-
-
 def _armTicksToAngle(value: int) -> int:
     """Convert ARM response value to degrees.
 
@@ -273,7 +281,7 @@ def handleColorCommand():
 if CAMERA_ENABLED:
     import alex_camera
     _camera = alex_camera.cameraOpen()
-_frames_remaining = 10  # frames remaining before further captures are refused
+_frames_remaining = MAX_CAMERA_FRAMES
 
 
 def handleCameraCommand():
@@ -309,10 +317,8 @@ def handleCameraCommand():
 # COMMAND-LINE INTERFACE
 # ----------------------------------------------------------------
 
-_motor_speed   = 200   # current speed (0-255)
-SPEED_STEP     = 25    # how much +/- changes the speed
-RAW_MOVE_MS    = 100   # duration per keypress in raw drive mode
-_auto_color    = False # auto-request colour every 6 s when True
+_motor_speed   = _MOTOR_SPEED_DEFAULT
+_auto_color    = False # auto-request colour when True
 _print_color   = False # print colour responses (off by default; use second terminal)
 
 
@@ -436,7 +442,7 @@ def runRawDriveMode():
     """Raw drive mode: WASD keys move instantly, no Enter required."""
     print("\n-- RAW DRIVE MODE --")
     print("  WASD = drive    +/- = speed    e = E-Stop    x = stop")
-    print("  c = Colour    p = Camera    t = Auto colour (6s)")
+    print("  c = Colour    p = Camera    t = Auto colour (5s)")
     print("  n = Toggle colour printing    m = Normal input mode\n")
 
     fd = sys.stdin.fileno()
@@ -448,7 +454,7 @@ def runRawDriveMode():
             _processSerial()
 
             now = time.time()
-            if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= 6.0:
+            if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= COLOR_SENSOR_INTERVAL:
                 handleColorCommand()
                 _last_color_time = now
 
@@ -490,7 +496,7 @@ def runCommandInterface():
 
     print("Sensor interface ready. Commands:")
     print(f"  e = E-Stop    c = Color sensor {'(disabled)' if not COLOR_ENABLED else ''}")
-    print(f"  t = Auto colour (6s)    n = Toggle colour printing")
+    print(f"  t = Auto colour (5s)    n = Toggle colour printing")
     print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}")
     print("  w <ms> = Forward   s <ms> = Backward")
     print("  a <ms> = Turn left d <ms> = Turn right")
@@ -506,13 +512,12 @@ def runCommandInterface():
     runRawDriveMode()
 
     _last_color_time = 0.0
-    color_sensor_interval = 5.0
 
     while True:
         _processSerial()
 
         now = time.time()
-        if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= color_sensor_interval:
+        if _auto_color and COLOR_ENABLED and (now - _last_color_time) >= COLOR_SENSOR_INTERVAL:
             handleColorCommand()
             _last_color_time = now
 

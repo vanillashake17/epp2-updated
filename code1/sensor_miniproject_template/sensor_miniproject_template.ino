@@ -24,12 +24,53 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-// Motor durations for timed movement
-#define MOVE_DURATION_MS 2000
-#define TURN_DURATION_MS 2000
+// =============================================================
+// Constants
+// =============================================================
 
-// Motor functions (forward, backward, ccw, cw, stop) are provided
-// by robotlib.ino which is compiled together with this sketch.
+#define MOVE_DURATION_MS 2000  // motor forward/backward duration
+#define TURN_DURATION_MS 2000  // motor turn duration
+#define THRESHOLD        20    // debounce threshold (20 x 100us = 2 ms)
+
+#define S0         (1 << PA0)  // Arduino D22
+#define S1         (1 << PA1)  // Arduino D23
+#define S2         (1 << PA2)  // Arduino D24
+#define S3         (1 << PA3)  // Arduino D25
+#define SENSOR_OUT (1 << PA4)  // Arduino D26
+
+#define BASE_PIN 0  // PC0 = Arduino 37
+#define SHLD_PIN 1  // PC1 = Arduino 36
+#define ELBW_PIN 4  // PC4 = Arduino 33
+#define GRIP_PIN 2  // PC2 = Arduino 35
+
+#define BASE_IDX 0  // array index for base servo
+#define SHLD_IDX 1  // array index for shoulder servo
+#define ELBW_IDX 2  // array index for elbow servo
+#define GRIP_IDX 3  // array index for gripper servo
+
+#define MIN_PULSE 600   // servo min pulse width (us)
+#define MAX_PULSE 2400  // servo max pulse width (us)
+
+#define BASE_MIN 130  // base angle lower limit
+#define BASE_MAX 180  // base angle upper limit
+#define SHLD_MIN 140  // shoulder angle lower limit
+#define SHLD_MAX 180  // shoulder angle upper limit
+#define ELBW_MIN 0    // elbow angle lower limit
+#define ELBW_MAX 50   // elbow angle upper limit
+#define GRIP_MIN 5    // gripper angle lower limit
+#define GRIP_MAX 33   // gripper angle upper limit
+
+#define BASE_HOME 180  // base home angle
+#define SHLD_HOME 180  // shoulder home angle
+#define ELBW_HOME 50   // elbow home angle
+#define GRIP_HOME 25   // gripper home angle
+
+#define BASE_CHECKPOINT 0      // staggered checkpoint (timer ticks)
+#define SHLD_CHECKPOINT 10000  // staggered checkpoint (timer ticks)
+#define ELBW_CHECKPOINT 20000  // staggered checkpoint (timer ticks)
+#define GRIP_CHECKPOINT 30000  // staggered checkpoint (timer ticks)
+
+#define TICKS_PER_PERIOD 50  // lerp speed: ticks per 20ms period per servo
 
 // =============================================================
 // Packet helpers (pre-implemented for you)
@@ -79,7 +120,6 @@ volatile bool _pressedWhileStopped = false;
 // =============================================================
 // Color sensor (TCS3200)
 // =============================================================
-#define THRESHOLD 20 // 50 x 100us = 5 ms debounce
 
 volatile unsigned long _timerTicks = 0;
 volatile unsigned long _lastTime = 0;
@@ -116,16 +156,6 @@ volatile unsigned long _lastTime = 0;
  *       *b = measureChannel(0, 1) * 10;  // blue,  in Hz
  *   }
  */
-
-// ---------------- COLOR SENSOR PINS ----------------
-
-#define S0 (1 << PA0)         // Arduino D22
-#define S1 (1 << PA1)         // Arduino D23
-#define S2 (1 << PA2)         // Arduino D24
-#define S3 (1 << PA3)         // Arduino D25
-#define SENSOR_OUT (1 << PA4) // Arduino D26
-
-// ---------------- SENSOR MEASUREMENT ----------------
 
 static uint32_t measureChannel(uint8_t s2, uint8_t s3) {
 
@@ -200,47 +230,6 @@ ISR(INT1_vect) {
 // =============================================================
 // Robot arm (Timer 5 servo driver)
 // =============================================================
-
-// PORTC bit positions (physical wiring)
-#define BASE_PIN 0 // PC0 = Arduino 37
-#define SHLD_PIN 1 // PC1 = Arduino 36
-#define ELBW_PIN 4 // PC4 = Arduino 33
-#define GRIP_PIN 2 // PC2 = Arduino 35
-
-// array indices (must match ISR stage order)
-#define BASE_IDX 0
-#define SHLD_IDX 1
-#define ELBW_IDX 2
-#define GRIP_IDX 3
-
-// servo pulse range in microseconds
-#define MIN_PULSE 600
-#define MAX_PULSE 2400
-
-// empirically tested servo limits (degrees)
-#define BASE_MIN 130
-#define BASE_MAX 180
-#define SHLD_MIN 140
-#define SHLD_MAX 180
-#define ELBW_MIN 0
-#define ELBW_MAX 50
-#define GRIP_MIN 5
-#define GRIP_MAX 33
-
-// default home pose (degrees)
-#define BASE_HOME 180
-#define SHLD_HOME 180
-#define ELBW_HOME 50
-#define GRIP_HOME 25
-
-// staggered checkpoints within the 20ms period (timer ticks)
-#define BASE_CHECKPOINT 0
-#define SHLD_CHECKPOINT 10000
-#define ELBW_CHECKPOINT 20000
-#define GRIP_CHECKPOINT 30000
-
-// lerp speed: ticks per 20ms period per servo
-#define TICKS_PER_PERIOD 50 // tune this — higher = faster slew
 
 volatile int arm_curr_ticks[4];
 volatile int arm_target_ticks[4];

@@ -1,6 +1,6 @@
 #include <AFMotor.h>
-// Direction values
-typedef enum dir
+
+typedef enum dir  // direction values
 {
 	STOP,
 	GO,
