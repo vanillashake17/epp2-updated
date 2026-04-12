@@ -32,7 +32,7 @@ from packets import *
 
 CAMERA_ENABLED       = True
 COLOR_ENABLED        = True
-CAMERA_ROTATE_CCW_90 = True
+CAMERA_ROTATE_CCW_DEG = 0
 
 # ----------------------------------------------------------------
 # SERIAL PORT SETUP
@@ -51,7 +51,7 @@ _MOTOR_SPEED_DEFAULT  = 200    # initial motor speed (0-255)
 SPEED_STEP            = 25     # how much +/- changes the speed
 RAW_MOVE_MS           = 100    # duration per keypress in raw drive mode
 COLOR_SENSOR_INTERVAL = 5.0    # seconds between auto colour requests
-MAX_CAMERA_FRAMES     = 10     # frames before further captures are refused
+MAX_CAMERA_FRAMES     = 15     # frames before further captures are refused
 
 _ser = None
 
@@ -301,7 +301,7 @@ def handleCameraCommand():
         if _frames_remaining > 0:
             newImage = alex_camera.captureGreyscaleFrame(
                 _camera,
-                rotate_ccw_90=CAMERA_ROTATE_CCW_90,
+                rotate_ccw_deg=CAMERA_ROTATE_CCW_DEG,
             )
             alex_camera.renderGreyscaleFrame(newImage)
             _frames_remaining -= 1
