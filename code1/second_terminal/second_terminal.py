@@ -169,7 +169,7 @@ def _printPacket(pkt):
                 g = pkt['params'][1]
                 b = pkt['params'][2]
                 print(f"[robot] R: {r} Hz, G: {g} Hz, B: {b} Hz")
-                if r > 9000 and g < 5000 and b < 5000:
+                if r > 8000 and g < 5000 and b < 5000:
                     label = "RED"
                 elif g > 5000 and r < 5000 and b < 5000:
                     label = "GREEN"
