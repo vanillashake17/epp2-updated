@@ -92,9 +92,9 @@ POINT_SIZE = 2             # LiDAR point cloud dot size
 # Robot footprint (metres) — drawn as a rotating rectangle on the map.
 # SLAM reports the LIDAR position; the LIDAR is mounted at the 0-11 cm mark
 # from the front of the robot (centre ≈ 55 mm from front edge).
-ROBOT_LENGTH_M = 0.320     # fore-aft dimension
+ROBOT_LENGTH_M = 0.370     # fore-aft dimension
 ROBOT_WIDTH_M  = 0.170     # left-right dimension
-LIDAR_TO_FRONT_M = 0.055   # distance from LIDAR centre to front edge
+LIDAR_TO_FRONT_M = 0.07   # distance from LIDAR centre to front edge
 LIDAR_TO_BACK_M  = ROBOT_LENGTH_M - LIDAR_TO_FRONT_M  # 0.265 m
 
 # ---------------------------------------------------------------------------

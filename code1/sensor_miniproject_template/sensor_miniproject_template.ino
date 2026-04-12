@@ -51,19 +51,19 @@
 #define MIN_PULSE 600   // servo min pulse width (us)
 #define MAX_PULSE 2400  // servo max pulse width (us)
 
-#define BASE_MIN 130  // base angle lower limit
+#define BASE_MIN 0  // base angle lower limit
 #define BASE_MAX 180  // base angle upper limit
-#define SHLD_MIN 140  // shoulder angle lower limit
+#define SHLD_MIN 110  // shoulder angle lower limit
 #define SHLD_MAX 180  // shoulder angle upper limit
 #define ELBW_MIN 0    // elbow angle lower limit
-#define ELBW_MAX 50   // elbow angle upper limit
+#define ELBW_MAX 180   // elbow angle upper limit
 #define GRIP_MIN 5    // gripper angle lower limit
 #define GRIP_MAX 33   // gripper angle upper limit
 
-#define BASE_HOME 180  // base home angle
-#define SHLD_HOME 180  // shoulder home angle
-#define ELBW_HOME 50   // elbow home angle
-#define GRIP_HOME 25   // gripper home angle
+#define BASE_HOME 80  // base home angle
+#define SHLD_HOME 150  // shoulder home angle
+#define ELBW_HOME 60   // elbow home angle
+#define GRIP_HOME 10   // gripper home angle
 
 #define BASE_CHECKPOINT 0      // staggered checkpoint (timer ticks)
 #define SHLD_CHECKPOINT 10000  // staggered checkpoint (timer ticks)
