@@ -269,9 +269,9 @@ def run():
     print("[second_terminal] Commands:  e = E-Stop  n = Toggle colour printing")
     print("[second_terminal]           b/s/e/g/vNNN = arm  h = home arm  q = quit")
     print("[second_terminal] Servo limits:")
-    print("  Base (b):     0 - 175")
-    print("  Shoulder (s): 140 (up) - 180 (down)")
-    print("  Elbow (e):    0 (down/in) - 60 (up/out)")
+    print("  Base (b):     0 - 180")
+    print("  Shoulder (s): 110 (up) - 180 (down)")
+    print("  Elbow (e):    0 (down/in) - 180 (up/out)")
     print("  Gripper (g):  5 (open) - 35 (closed)")
     print("[second_terminal] Incoming robot packets will be printed below.\n")
 

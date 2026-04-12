@@ -62,7 +62,7 @@
 
 #define BASE_HOME 80  // base home angle
 #define SHLD_HOME 150  // shoulder home angle
-#define ELBW_HOME 60   // elbow home angle
+#define ELBW_HOME 180   // elbow home angle
 #define GRIP_HOME 10   // gripper home angle
 
 #define BASE_CHECKPOINT 0      // staggered checkpoint (timer ticks)
@@ -491,8 +491,11 @@ static void handleCommand(const TPacket *cmd) {
 					  memset(&pkt, 0, sizeof(pkt));
 					  pkt.packetType = PACKET_TYPE_RESPONSE;
 					  pkt.command = RESP_ARM;
+					  // Report the commanded target so the Pi / second terminal
+					  // print matches where the servos will settle, not the
+					  // pre-lerp position.
 					  for (int i = 0; i < 4; i++)
-						  pkt.params[i] = (uint32_t)arm_curr_ticks[i];
+						  pkt.params[i] = (uint32_t)arm_target_ticks[i];
 					  sendFrame(&pkt);
 					  break;
 				  }
