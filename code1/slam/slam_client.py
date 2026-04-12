@@ -77,7 +77,7 @@ MAP_MM = MAP_METERS * 1000
 MAP_QUALITY = 8
 
 # Gap size (mm) that SLAM treats as a continuous wall.
-HOLE_WIDTH_MM = 100
+HOLE_WIDTH_MM = 50
 
 # Minimum valid scan points required to do a full SLAM update; otherwise the
 # previous good scan is reused.
