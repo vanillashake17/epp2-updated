@@ -62,8 +62,8 @@
 
 #define BASE_HOME 80  // base home angle
 #define SHLD_HOME 150  // shoulder home angle
-#define ELBW_HOME 180   // elbow home angle
-#define GRIP_HOME 10   // gripper home angle
+#define ELBW_HOME 80   // elbow home angle
+#define GRIP_HOME 25   // gripper home angle
 
 #define BASE_CHECKPOINT 0      // staggered checkpoint (timer ticks)
 #define SHLD_CHECKPOINT 10000  // staggered checkpoint (timer ticks)
