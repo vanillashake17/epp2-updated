@@ -42,6 +42,7 @@ for _backend in ['TkAgg', 'Qt5Agg', 'GTK3Agg', 'WXAgg', 'Agg']:
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
+from matplotlib.widgets import Button
 import numpy as np
 
 # ---------------------------------------------------------------------------
@@ -192,7 +193,39 @@ def run(host: str, port: int = DEFAULT_PORT):
         bbox=dict(facecolor='white', alpha=0.7),
     )
 
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.93, bottom=0.13, wspace=0.3)
+
+    # -- View-toggle button --------------------------------------------------
+    # Capture both-view axis positions after initial layout.
+    fig.canvas.draw()
+    orig_pos_map = ax_map.get_position().frozen()
+    orig_pos_pts = ax_pts.get_position().frozen()
+
+    ax_btn = fig.add_axes([0.43, 0.02, 0.14, 0.06])
+    btn_toggle = Button(ax_btn, 'Full Map', color='0.85', hovercolor='0.70')
+
+    _fullscreen = [False]
+
+    def _toggle_fullscreen(event):
+        _fullscreen[0] = not _fullscreen[0]
+        if _fullscreen[0]:
+            ax_pts.set_visible(False)
+            ax_map.set_position([
+                orig_pos_map.x0,
+                orig_pos_map.y0,
+                orig_pos_pts.x0 + orig_pos_pts.width - orig_pos_map.x0,
+                orig_pos_map.height,
+            ])
+            btn_toggle.label.set_text('Both Maps')
+        else:
+            ax_pts.set_visible(True)
+            ax_map.set_position(orig_pos_map)
+            ax_pts.set_position(orig_pos_pts)
+            btn_toggle.label.set_text('Full Map')
+        fig.canvas.draw_idle()
+
+    btn_toggle.on_clicked(_toggle_fullscreen)
+
     fig.canvas.draw()
     plt.pause(0.1)
 
@@ -306,11 +339,12 @@ def run(host: str, port: int = DEFAULT_PORT):
                     [arrow_len * fy],
                 )
 
-                px, py = _scan_to_xy(last_distances, last_angles)
-                pts_plot.set_data(px, py)
-                pos_text.set_text(
-                    f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={last_valid}'
-                )
+                if ax_pts.get_visible():
+                    px, py = _scan_to_xy(last_distances, last_angles)
+                    pts_plot.set_data(px, py)
+                    pos_text.set_text(
+                        f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={last_valid}'
+                    )
 
                 fig.canvas.draw_idle()
 
