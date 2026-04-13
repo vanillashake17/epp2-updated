@@ -83,6 +83,14 @@ HOLE_WIDTH_MM = 50
 # previous good scan is reused.
 MIN_VALID_POINTS = 150
 
+# Object-length filter: lidar returns are clustered by spatial proximity;
+# clusters shorter than MIN_OBJECT_LENGTH_M are treated as noise and zeroed
+# out, while longer clusters are preserved so real objects/walls stay on the
+# SLAM map. MAX_CLUSTER_GAP_M is the largest Euclidean gap (m) between two
+# angle-adjacent returns that still counts as the same cluster.
+MIN_OBJECT_LENGTH_M = 0.20
+MAX_CLUSTER_GAP_M = 0.15
+
 # ---------------------------------------------------------------------------
 # Visualisation constants
 # ---------------------------------------------------------------------------
@@ -246,6 +254,47 @@ def run(host: str, port: int = DEFAULT_PORT):
 
                 angles    = scan['angles']
                 distances = scan['distances']
+
+                # Mask rear hemisphere (raw lidar angles 90-270 deg map to
+                # behind the robot), then preserve only clusters of the
+                # remaining returns that span >= MIN_OBJECT_LENGTH_M so SLAM
+                # ignores isolated noisy returns.
+                _a = np.asarray(angles, dtype=np.float64)
+                _d = np.asarray(distances, dtype=np.float64).copy()
+                _d[(_a % 360 > 90) & (_a % 360 < 270)] = 0
+                _valid = (_d > 0) & (_d < MAX_DIST_MM)
+                if _valid.any():
+                    _rad = np.radians((_a + 90) % 360)
+                    _dm = _d / 1000.0
+                    _x = _dm * np.cos(_rad)
+                    _y = _dm * np.sin(_rad)
+
+                    _idx = np.where(_valid)[0]
+                    # Sort so the rear (masked) sits at the wrap boundary;
+                    # this keeps the forward arc contiguous so walls
+                    # straddling raw 0 deg aren't split into two clusters.
+                    _idx = _idx[np.argsort((_a[_idx] + 180) % 360)]
+                    _keep = np.zeros(_d.shape, dtype=bool)
+
+                    _gap_sq = MAX_CLUSTER_GAP_M * MAX_CLUSTER_GAP_M
+                    _start = 0
+                    while _start < len(_idx):
+                        _end = _start
+                        while _end + 1 < len(_idx):
+                            i1 = _idx[_end]
+                            i2 = _idx[_end + 1]
+                            if (_x[i2] - _x[i1]) ** 2 + (_y[i2] - _y[i1]) ** 2 > _gap_sq:
+                                break
+                            _end += 1
+                        i_s = _idx[_start]
+                        i_e = _idx[_end]
+                        span = math.hypot(_x[i_e] - _x[i_s], _y[i_e] - _y[i_s])
+                        if span >= MIN_OBJECT_LENGTH_M:
+                            _keep[_idx[_start:_end + 1]] = True
+                        _start = _end + 1
+
+                    _d[~_keep] = 0
+                    distances = _d.tolist()
 
                 # -- SLAM update ---------------------------------------------
                 d_arr = np.asarray(distances, dtype=np.float64)
