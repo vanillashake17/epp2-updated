@@ -74,10 +74,10 @@ MAP_METERS = 7          # real-world metres covered by the map
 MAP_MM = MAP_METERS * 1000
 
 # BreezySLAM quality parameter (1 = cautious, 10 = aggressive).
-MAP_QUALITY = 8
+MAP_QUALITY = 5
 
 # Gap size (mm) that SLAM treats as a continuous wall.
-HOLE_WIDTH_MM = 50
+HOLE_WIDTH_MM = 100
 
 # Minimum valid scan points required to do a full SLAM update; otherwise the
 # previous good scan is reused.
@@ -88,6 +88,13 @@ MIN_VALID_POINTS = 150
 # ---------------------------------------------------------------------------
 UPDATE_INTERVAL_MS = 100   # matplotlib animation interval (ms)
 POINT_SIZE = 2             # LiDAR point cloud dot size
+
+# Wall detection: angularly-adjacent points are grouped into clusters; a
+# cluster spanning more than WALL_MIN_LENGTH_M end-to-end is treated as a
+# wall and rendered red. WALL_GAP_M is the max distance between consecutive
+# points that still counts as part of the same cluster.
+WALL_MIN_LENGTH_M = 0.20
+WALL_GAP_M = 0.03
 
 # Robot footprint (metres) — drawn as a rotating rectangle on the map.
 # SLAM reports the LIDAR position; the LIDAR is mounted at the 0-11 cm mark
@@ -129,6 +136,33 @@ def _scan_to_xy(distances, angles):
     rad = np.radians((a + 90) % 360)
     d_m = d / 1000.0
     return d_m * np.cos(rad), d_m * np.sin(rad)
+
+
+def _wall_mask(px, py, gap_m=WALL_GAP_M, min_len_m=WALL_MIN_LENGTH_M):
+    """Return a boolean mask flagging points belonging to wall-like clusters.
+
+    Points are sorted by bearing, then split into clusters wherever the
+    Euclidean gap between consecutive points exceeds ``gap_m``. A cluster
+    whose end-to-end span exceeds ``min_len_m`` is tagged as a wall.
+    """
+    n = len(px)
+    if n == 0:
+        return np.zeros(0, dtype=bool)
+    order = np.argsort(np.arctan2(py, px))
+    xs = px[order]
+    ys = py[order]
+    gaps = np.hypot(np.diff(xs), np.diff(ys)) > gap_m
+    breaks = np.concatenate(([0], np.flatnonzero(gaps) + 1, [n]))
+    sorted_mask = np.zeros(n, dtype=bool)
+    for start, end in zip(breaks[:-1], breaks[1:]):
+        if end - start < 2:
+            continue
+        span = math.hypot(xs[end - 1] - xs[start], ys[end - 1] - ys[start])
+        if span > min_len_m:
+            sorted_mask[start:end] = True
+    mask = np.zeros(n, dtype=bool)
+    mask[order] = sorted_mask
+    return mask
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +219,8 @@ def run(host: str, port: int = DEFAULT_PORT):
     ax_pts.set_ylim(-half, half)
     ax_pts.set_aspect('equal')
     ax_pts.grid(True)
-    pts_plot, = ax_pts.plot([], [], 'r.', markersize=POINT_SIZE)
+    pts_plot,  = ax_pts.plot([], [], '.', color='0.4', markersize=POINT_SIZE)
+    wall_plot, = ax_pts.plot([], [], 'r.', markersize=POINT_SIZE)
     pos_text = ax_pts.text(
         -half + 0.2, half - 0.4, '',
         fontsize=9, color='black',
@@ -307,7 +342,9 @@ def run(host: str, port: int = DEFAULT_PORT):
                 )
 
                 px, py = _scan_to_xy(last_distances, last_angles)
-                pts_plot.set_data(px, py)
+                wall = _wall_mask(px, py)
+                pts_plot.set_data(px[~wall], py[~wall])
+                wall_plot.set_data(px[wall], py[wall])
                 pos_text.set_text(
                     f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={last_valid}'
                 )
