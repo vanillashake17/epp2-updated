@@ -20,6 +20,7 @@ run BreezySLAM locally with a matplotlib display.
 import json
 import os
 import socket
+import statistics
 import sys
 
 _slam_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,36 +39,54 @@ HOST = '0.0.0.0'
 PORT = 5002
 
 
+_OUTLIER_THRESHOLD = 0.30   # reject readings that deviate > 30 % from bin median
+
+
 def _resample(raw_angles, raw_distances):
     """Resample a raw LIDAR scan into SCAN_SIZE equal-angle bins.
 
     Converts from RPLidar clockwise convention to BreezySLAM counter-clockwise
-    convention, applies LIDAR_OFFSET_DEG, then bins and averages readings that
-    fall into the same degree bucket.  Empty bins are filled with MAX_DISTANCE_MM.
+    convention, applies LIDAR_OFFSET_DEG, then bins readings that fall into the
+    same degree bucket.
+
+    Each bin is reduced to a single distance value using median + outlier
+    rejection:
+      - Bins with 1–2 readings: median of those readings (== min for 1 reading).
+      - Bins with 3+ readings: readings that deviate more than _OUTLIER_THRESHOLD
+        (30 %) from the bin median are discarded; the median of the survivors is
+        used.  This eliminates spurious spikes while keeping genuine close
+        obstacles.
+    Empty bins are filled with MAX_DISTANCE_MM (treated as "no obstacle").
 
     Returns (angles, distances) as two parallel lists of SCAN_SIZE floats.
     angles[i] = i * (360 / SCAN_SIZE) degrees
-    distances[i] = averaged distance in mm for that bin
+    distances[i] = filtered distance in mm for that bin
     """
-    bin_sums = [0.0] * SCAN_SIZE
-    bin_counts = [0] * SCAN_SIZE
+    bins = [[] for _ in range(SCAN_SIZE)]
 
     for angle, dist in zip(raw_angles, raw_distances):
         if dist <= 0:
             continue
         ccw_angle = (-angle + LIDAR_OFFSET_DEG) % 360
         idx = int(round(ccw_angle)) % SCAN_SIZE
-        bin_sums[idx] += dist
-        bin_counts[idx] += 1
+        bins[idx].append(dist)
 
     angles = []
     distances = []
     for i in range(SCAN_SIZE):
         angles.append(float(i * 360 / SCAN_SIZE))
-        if bin_counts[i] > 0:
-            distances.append(min(bin_sums[i] / bin_counts[i], float(MAX_DISTANCE_MM)))
-        else:
+        readings = bins[i]
+        if not readings:
             distances.append(float(MAX_DISTANCE_MM))
+            continue
+        med = statistics.median(readings)
+        if len(readings) >= 3:
+            # Discard readings that deviate too far from the median.
+            threshold = med * _OUTLIER_THRESHOLD
+            survivors = [d for d in readings if abs(d - med) <= threshold]
+            if survivors:
+                med = statistics.median(survivors)
+        distances.append(min(med, float(MAX_DISTANCE_MM)))
 
     return angles, distances
 

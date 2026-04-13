@@ -28,11 +28,22 @@ LIDAR_BAUD = 115200
 SCAN_SIZE = 360
 
 # Readings beyond this distance (in mm) are treated as misses (no return).
-MAX_DISTANCE_MM = 5000
+# Must match MAX_DIST_MM in slam_client.py so the forwarder and SLAM client
+# agree on what counts as "no obstacle".
+MAX_DISTANCE_MM = 3500
 
-# Number of scans to skip at startup.  The LIDAR motor needs a few rotations
+# Number of scans to skip at startup.  The LIDAR motor needs several rotations
 # to reach full speed; early scans are noisier than steady-state scans.
-INITIAL_ROUNDS_SKIP = 5
+INITIAL_ROUNDS_SKIP = 10
+
+# ===========================================================================
+# Scan quality filtering
+# ===========================================================================
+
+# Minimum per-measurement quality value to keep.  The RPLidar reports quality
+# in the range 0–15; 0 is explicitly invalid, and 1–4 are marginal readings.
+# Raise this if you still see spikes; lower it if too many points are dropped.
+MIN_QUALITY = 5
 
 # ===========================================================================
 # LIDAR mounting offset

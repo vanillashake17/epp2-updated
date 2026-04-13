@@ -14,7 +14,7 @@ The LIDAR_PORT and LIDAR_BAUD settings live in settings.py.
 import time
 from pyrplidar import PyRPlidar
 
-from settings import LIDAR_PORT, LIDAR_BAUD
+from settings import LIDAR_PORT, LIDAR_BAUD, MIN_QUALITY
 
 
 def connect(port=LIDAR_PORT, baudrate=LIDAR_BAUD):
@@ -71,9 +71,12 @@ def scan_rounds(lidar, mode):
             # Yield the completed buffer from the previous rotation.
             if started and buff:
                 yield [m.angle for m in buff], [m.distance for m in buff]
-            buff = [meas]
+            buff = []
             started = True
-        elif started:
+        # Only keep measurements that meet the minimum quality threshold.
+        # The start_flag measurement is still used above for rotation bookkeeping
+        # regardless of its own quality value.
+        if started and meas.quality >= MIN_QUALITY:
             buff.append(meas)
 
 
