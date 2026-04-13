@@ -81,7 +81,7 @@ HOLE_WIDTH_MM = 100
 
 # Minimum valid scan points required to do a full SLAM update; otherwise the
 # previous good scan is reused.
-MIN_VALID_POINTS = 150
+MIN_VALID_POINTS = 100
 
 # ---------------------------------------------------------------------------
 # Visualisation constants
@@ -138,31 +138,43 @@ def _scan_to_xy(distances, angles):
     return d_m * np.cos(rad), d_m * np.sin(rad)
 
 
-def _wall_mask(px, py, gap_m=WALL_GAP_M, min_len_m=WALL_MIN_LENGTH_M):
-    """Return a boolean mask flagging points belonging to wall-like clusters.
+def _wall_segments(px, py, gap_m=WALL_GAP_M, min_len_m=WALL_MIN_LENGTH_M):
+    """Split a scan into wall polylines and loose points.
 
-    Points are sorted by bearing, then split into clusters wherever the
-    Euclidean gap between consecutive points exceeds ``gap_m``. A cluster
-    whose end-to-end span exceeds ``min_len_m`` is tagged as a wall.
+    Points are sorted by bearing and split into clusters wherever the gap
+    between consecutive points exceeds ``gap_m``. Clusters whose end-to-end
+    span exceeds ``min_len_m`` become wall polylines; everything else is
+    returned as loose points. Wall polylines are concatenated into a single
+    pair of arrays separated by NaN so they render as one Line2D.
     """
+    empty = np.zeros(0)
     n = len(px)
     if n == 0:
-        return np.zeros(0, dtype=bool)
+        return empty, empty, empty, empty
     order = np.argsort(np.arctan2(py, px))
     xs = px[order]
     ys = py[order]
     gaps = np.hypot(np.diff(xs), np.diff(ys)) > gap_m
     breaks = np.concatenate(([0], np.flatnonzero(gaps) + 1, [n]))
-    sorted_mask = np.zeros(n, dtype=bool)
+    wall_chunks_x = []
+    wall_chunks_y = []
+    loose_idx = []
     for start, end in zip(breaks[:-1], breaks[1:]):
-        if end - start < 2:
-            continue
-        span = math.hypot(xs[end - 1] - xs[start], ys[end - 1] - ys[start])
-        if span > min_len_m:
-            sorted_mask[start:end] = True
-    mask = np.zeros(n, dtype=bool)
-    mask[order] = sorted_mask
-    return mask
+        if end - start >= 2:
+            span = math.hypot(xs[end - 1] - xs[start], ys[end - 1] - ys[start])
+            if span > min_len_m:
+                wall_chunks_x.append(xs[start:end])
+                wall_chunks_y.append(ys[start:end])
+                wall_chunks_x.append([np.nan])
+                wall_chunks_y.append([np.nan])
+                continue
+        loose_idx.extend(range(start, end))
+    wx = np.concatenate(wall_chunks_x) if wall_chunks_x else empty
+    wy = np.concatenate(wall_chunks_y) if wall_chunks_y else empty
+    if loose_idx:
+        idx = np.array(loose_idx, dtype=int)
+        return wx, wy, xs[idx], ys[idx]
+    return wx, wy, empty, empty
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +208,7 @@ def run(host: str, port: int = DEFAULT_PORT):
         extent=[0, MAP_METERS, 0, MAP_METERS],
         vmin=0, vmax=255,
     )
+    wall_plot, = ax_map.plot([], [], '-', color='red', linewidth=2)
     # Robot footprint rectangle — corners updated in-place each frame.
     robot_patch = Polygon(
         np.zeros((4, 2)),
@@ -219,8 +232,7 @@ def run(host: str, port: int = DEFAULT_PORT):
     ax_pts.set_ylim(-half, half)
     ax_pts.set_aspect('equal')
     ax_pts.grid(True)
-    pts_plot,  = ax_pts.plot([], [], '.', color='0.4', markersize=POINT_SIZE)
-    wall_plot, = ax_pts.plot([], [], 'r.', markersize=POINT_SIZE)
+    pts_plot,  = ax_pts.plot([], [], '.', color='black', markersize=POINT_SIZE)
     pos_text = ax_pts.text(
         -half + 0.2, half - 0.4, '',
         fontsize=9, color='black',
@@ -342,9 +354,12 @@ def run(host: str, port: int = DEFAULT_PORT):
                 )
 
                 px, py = _scan_to_xy(last_distances, last_angles)
-                wall = _wall_mask(px, py)
-                pts_plot.set_data(px[~wall], py[~wall])
-                wall_plot.set_data(px[wall], py[wall])
+                wx, wy, lx, ly = _wall_segments(px, py)
+                pts_plot.set_data(lx, ly)
+                # Convert robot-relative wall points to map display coords.
+                wall_map_x = cx + wy * fx + wx * rx
+                wall_map_y = cy + wy * fy + wx * ry
+                wall_plot.set_data(wall_map_x, wall_map_y)
                 pos_text.set_text(
                     f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={last_valid}'
                 )
