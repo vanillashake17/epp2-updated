@@ -247,15 +247,6 @@ def run(host: str, port: int = DEFAULT_PORT):
                 angles    = scan['angles']
                 distances = scan['distances']
 
-                # Filter to front hemisphere only (positive Y in robot frame).
-                # Raw angles 90-270 deg map to negative Y (rear of robot); zero
-                # them out so BreezySLAM treats them as no-return rather than
-                # letting noisy rear readings corrupt the scan match.
-                _a = np.asarray(angles, dtype=np.float64)
-                _d = np.asarray(distances, dtype=np.float64).copy()
-                _d[(_a % 360 > 90) & (_a % 360 < 270)] = 0
-                distances = _d.tolist()
-
                 # -- SLAM update ---------------------------------------------
                 d_arr = np.asarray(distances, dtype=np.float64)
                 valid = int(np.count_nonzero((d_arr > 0) & (d_arr < MAX_DIST_MM)))
