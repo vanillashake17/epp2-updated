@@ -75,9 +75,25 @@ def onPacketReceived(raw_frame: bytes):
     global _st_conn
 
     if _st_conn is not None:
-        ok = sendTPacketFrame(_st_conn, raw_frame)
-        if not ok:
-            print("[relay] Second terminal disconnected (send failed).")
+        try:
+            # Attempt to send the frame
+            ok = sendTPacketFrame(_st_conn, raw_frame)
+            
+            if not ok:
+                print("[relay] Second terminal disconnected (clean close).")
+                _st_conn = None
+                
+        except Exception as e:
+            # Catch SSH hiccups, network timeouts, socket crashes, etc.
+            print(f"[relay] Network error: {e}. Dropping connection.")
+            
+            # Properly close socket before dropping reference
+            try:
+                _st_conn.close()
+            except Exception:
+                pass
+            
+            # Force reconnection attempt
             _st_conn = None
 
 

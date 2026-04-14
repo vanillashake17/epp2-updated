@@ -61,8 +61,8 @@
 #define GRIP_MAX 33   // gripper angle upper limit
 
 #define BASE_HOME 80  // base home angle
-#define SHLD_HOME 150  // shoulder home angle
-#define ELBW_HOME 80   // elbow home angle
+#define SHLD_HOME 140  // shoulder home angle
+#define ELBW_HOME 90   // elbow home angle
 #define GRIP_HOME 25   // gripper home angle
 
 #define BASE_CHECKPOINT 0      // staggered checkpoint (timer ticks)
