@@ -42,6 +42,7 @@ for _backend in ['TkAgg', 'Qt5Agg', 'GTK3Agg', 'WXAgg', 'Agg']:
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
+from matplotlib.widgets import Button
 import numpy as np
 
 # ---------------------------------------------------------------------------
@@ -65,8 +66,9 @@ SCAN_SIZE = 360
 SCAN_RATE_HZ = 5
 # Full 360-degree field of view.
 SCAN_FOV_DEG = 360
-# Distances beyond this are treated as "no obstacle" (12 m).
-MAX_DIST_MM = 4000
+# Distances beyond this are treated as "no obstacle".
+# Must match MAX_DISTANCE_MM in settings.py (Pi-side forwarder).
+MAX_DIST_MM = 3500
 
 # SLAM map dimensions.
 MAP_PIXELS = 1200        # pixels per side of the square map
@@ -74,10 +76,12 @@ MAP_METERS = 7          # real-world metres covered by the map
 MAP_MM = MAP_METERS * 1000
 
 # BreezySLAM quality parameter (1 = cautious, 10 = aggressive).
-MAP_QUALITY = 5
+MAP_QUALITY = 7
 
-# Gap size (mm) that SLAM treats as a continuous wall.
-HOLE_WIDTH_MM = 100
+# Gap size (mm) that SLAM treats as a continuous wall.  150 mm is a balance
+# between wall continuity and preserving small obstacles (< 15 cm) that would
+# be erased if this value were larger than their scan shadow (~150 mm at 1 m).
+HOLE_WIDTH_MM = 150
 
 # Minimum valid scan points required to do a full SLAM update; otherwise the
 # previous good scan is reused.
@@ -88,13 +92,6 @@ MIN_VALID_POINTS = 100
 # ---------------------------------------------------------------------------
 UPDATE_INTERVAL_MS = 100   # matplotlib animation interval (ms)
 POINT_SIZE = 2             # LiDAR point cloud dot size
-
-# Wall detection: angularly-adjacent points are grouped into clusters; a
-# cluster spanning more than WALL_MIN_LENGTH_M end-to-end is treated as a
-# wall and rendered red. WALL_GAP_M is the max distance between consecutive
-# points that still counts as part of the same cluster.
-WALL_MIN_LENGTH_M = 0.20
-WALL_GAP_M = 0.03
 
 # Robot footprint (metres) — drawn as a rotating rectangle on the map.
 # SLAM reports the LIDAR position; the LIDAR is mounted at the 0-11 cm mark
@@ -138,45 +135,6 @@ def _scan_to_xy(distances, angles):
     return d_m * np.cos(rad), d_m * np.sin(rad)
 
 
-def _wall_segments(px, py, gap_m=WALL_GAP_M, min_len_m=WALL_MIN_LENGTH_M):
-    """Split a scan into wall polylines and loose points.
-
-    Points are sorted by bearing and split into clusters wherever the gap
-    between consecutive points exceeds ``gap_m``. Clusters whose end-to-end
-    span exceeds ``min_len_m`` become wall polylines; everything else is
-    returned as loose points. Wall polylines are concatenated into a single
-    pair of arrays separated by NaN so they render as one Line2D.
-    """
-    empty = np.zeros(0)
-    n = len(px)
-    if n == 0:
-        return empty, empty, empty, empty
-    order = np.argsort(np.arctan2(py, px))
-    xs = px[order]
-    ys = py[order]
-    gaps = np.hypot(np.diff(xs), np.diff(ys)) > gap_m
-    breaks = np.concatenate(([0], np.flatnonzero(gaps) + 1, [n]))
-    wall_chunks_x = []
-    wall_chunks_y = []
-    loose_idx = []
-    for start, end in zip(breaks[:-1], breaks[1:]):
-        if end - start >= 2:
-            span = math.hypot(xs[end - 1] - xs[start], ys[end - 1] - ys[start])
-            if span > min_len_m:
-                wall_chunks_x.append(xs[start:end])
-                wall_chunks_y.append(ys[start:end])
-                wall_chunks_x.append([np.nan])
-                wall_chunks_y.append([np.nan])
-                continue
-        loose_idx.extend(range(start, end))
-    wx = np.concatenate(wall_chunks_x) if wall_chunks_x else empty
-    wy = np.concatenate(wall_chunks_y) if wall_chunks_y else empty
-    if loose_idx:
-        idx = np.array(loose_idx, dtype=int)
-        return wx, wy, xs[idx], ys[idx]
-    return wx, wy, empty, empty
-
-
 # ---------------------------------------------------------------------------
 # Main client
 # ---------------------------------------------------------------------------
@@ -208,7 +166,6 @@ def run(host: str, port: int = DEFAULT_PORT):
         extent=[0, MAP_METERS, 0, MAP_METERS],
         vmin=0, vmax=255,
     )
-    wall_plot, = ax_map.plot([], [], '-', color='red', linewidth=2)
     # Robot footprint rectangle — corners updated in-place each frame.
     robot_patch = Polygon(
         np.zeros((4, 2)),
@@ -239,7 +196,39 @@ def run(host: str, port: int = DEFAULT_PORT):
         bbox=dict(facecolor='white', alpha=0.7),
     )
 
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.93, bottom=0.13, wspace=0.3)
+
+    # -- View-toggle button --------------------------------------------------
+    # Capture both-view axis positions after initial layout.
+    fig.canvas.draw()
+    orig_pos_map = ax_map.get_position().frozen()
+    orig_pos_pts = ax_pts.get_position().frozen()
+
+    ax_btn = fig.add_axes([0.43, 0.02, 0.14, 0.06])
+    btn_toggle = Button(ax_btn, 'Full Map', color='0.85', hovercolor='0.70')
+
+    _fullscreen = [False]
+
+    def _toggle_fullscreen(event):
+        _fullscreen[0] = not _fullscreen[0]
+        if _fullscreen[0]:
+            ax_pts.set_visible(False)
+            ax_map.set_position([
+                orig_pos_map.x0,
+                orig_pos_map.y0,
+                orig_pos_pts.x0 + orig_pos_pts.width - orig_pos_map.x0,
+                orig_pos_map.height,
+            ])
+            btn_toggle.label.set_text('Both Maps')
+        else:
+            ax_pts.set_visible(True)
+            ax_map.set_position(orig_pos_map)
+            ax_pts.set_position(orig_pos_pts)
+            btn_toggle.label.set_text('Full Map')
+        fig.canvas.draw_idle()
+
+    btn_toggle.on_clicked(_toggle_fullscreen)
+
     fig.canvas.draw()
     plt.pause(0.1)
 
@@ -353,16 +342,12 @@ def run(host: str, port: int = DEFAULT_PORT):
                     [arrow_len * fy],
                 )
 
-                px, py = _scan_to_xy(last_distances, last_angles)
-                wx, wy, lx, ly = _wall_segments(px, py)
-                pts_plot.set_data(lx, ly)
-                # Convert robot-relative wall points to map display coords.
-                wall_map_x = cx + wy * fx + wx * rx
-                wall_map_y = cy + wy * fy + wx * ry
-                wall_plot.set_data(wall_map_x, wall_map_y)
-                pos_text.set_text(
-                    f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={last_valid}'
-                )
+                if ax_pts.get_visible():
+                    px, py = _scan_to_xy(last_distances, last_angles)
+                    pts_plot.set_data(px, py)
+                    pos_text.set_text(
+                        f'x={x_m:.2f}m  y={y_m:.2f}m\nθ={theta_deg:.1f}°  valid={last_valid}'
+                    )
 
                 fig.canvas.draw_idle()
 
