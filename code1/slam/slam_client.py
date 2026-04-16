@@ -66,9 +66,8 @@ SCAN_SIZE = 360
 SCAN_RATE_HZ = 5
 # Full 360-degree field of view.
 SCAN_FOV_DEG = 360
-# Distances beyond this are treated as "no obstacle".
-# Must match MAX_DISTANCE_MM in settings.py (Pi-side forwarder).
-MAX_DIST_MM = 3500
+# Distances beyond this are treated as "no obstacle" (12 m).
+MAX_DIST_MM = 4000
 
 # SLAM map dimensions.
 MAP_PIXELS = 1200        # pixels per side of the square map
@@ -76,12 +75,10 @@ MAP_METERS = 7          # real-world metres covered by the map
 MAP_MM = MAP_METERS * 1000
 
 # BreezySLAM quality parameter (1 = cautious, 10 = aggressive).
-MAP_QUALITY = 7
+MAP_QUALITY = 5
 
-# Gap size (mm) that SLAM treats as a continuous wall.  150 mm is a balance
-# between wall continuity and preserving small obstacles (< 15 cm) that would
-# be erased if this value were larger than their scan shadow (~150 mm at 1 m).
-HOLE_WIDTH_MM = 150
+# Gap size (mm) that SLAM treats as a continuous wall.
+HOLE_WIDTH_MM = 100
 
 # Minimum valid scan points required to do a full SLAM update; otherwise the
 # previous good scan is reused.

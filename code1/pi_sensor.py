@@ -32,7 +32,7 @@ from packets import *
 
 CAMERA_ENABLED       = True
 COLOR_ENABLED        = True
-CAMERA_ROTATE_CCW_DEG = 0
+CAMERA_ROTATE_CCW_DEG = 90
 
 # ----------------------------------------------------------------
 # SERIAL PORT SETUP
@@ -51,7 +51,7 @@ _MOTOR_SPEED_DEFAULT  = 200    # initial motor speed (0-255)
 SPEED_STEP            = 25     # how much +/- changes the speed
 RAW_MOVE_MS           = 100    # duration per keypress in raw drive mode
 COLOR_SENSOR_INTERVAL = 5.0    # seconds between auto colour requests
-MAX_CAMERA_FRAMES     = 50     # frames before further captures are refused
+MAX_CAMERA_FRAMES     = 300     # frames before further captures are refused
 
 _ser = None
 
