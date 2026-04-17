@@ -19,7 +19,7 @@ The Raspberry Pi acts as the main hub, while the Arduino acts as the low-level h
 A second terminal is used by a secondary operator on a desktop computer to remotely control the robotic arm.
 
 - **`code1/second_terminal/second_terminal.py`**: The client-side terminal running on the Desktop. It uses TLS 1.2+ encryption using a self-signed certificate (`certs/server.crt`) to securely transmit arm joint positions to the Pi on TCP port 65432.
-- **`code1/second_terminal/relay.py`**: A module imported by `pi_sensor.py` (not a separate process). It starts a TLS TCP server on port 65432, accepts a connection from `second_terminal.py`, and bi-directionally relays TPacket frames between the second terminal and the Arduino serial port.
+- **`code1/second_terminal/relay.py`**: A module imported by `pi_sensor.py` (not a separate process). It starts a TLS TCP server on port 65432, accepts a connection from `second_terminal.py`, and bi-directionally relays TPacket frames between the second terminal and the Arduino serial port. Network errors are caught and the connection is dropped cleanly, allowing the second terminal to reconnect without restarting `pi_sensor.py`.
 - **`code1/second_terminal/net_utils.py`**: Wraps the network traffic in a 4-byte length-prefixed frame to prevent partial-packet TCP transmission errors.
 
 ### 3. Offloaded SLAM Data Pipeline (LiDAR -> Raspberry Pi -> Desktop)
@@ -29,7 +29,7 @@ To avoid overloading the Raspberry Pi with heavy algorithms, the SLAM map genera
 - **`code1/lidar/alex_lidar.py` and `code1/pyrplidar/`**: Low-level wrappers that talk to the physical RPLidar A1M8 hardware over USB.
 - **`code1/slam/lidar.py`**: The driver that manages the hardware lifecycle (connecting, checking scan modes, and yielding complete 360-degree rotation 'rounds' of angles/distances).
 - **`code1/slam/lidar_forwarder.py`**: Runs on the Raspberry Pi. It imports `lidar.py` to fetch the raw rounds, resamples the uneven data into exactly 360 equal-angle bins, packages it as JSON, and streams it continuously over TCP port 5002.
-- **`code1/slam/slam_client.py`**: Runs on the Desktop. Connects to port 5002, feeds the incoming JSON arrays into the BreezySLAM algorithm locally, and utilizes `matplotlib` to render a highly accurate, continuous-coordinate map of the room.
+- **`code1/slam/slam_client.py`**: Runs on the Desktop. Connects to port 5002, feeds the incoming JSON arrays into the BreezySLAM algorithm locally, and utilizes `matplotlib` to render a highly accurate, continuous-coordinate map of the room. Includes a view-toggle button to switch between a dual-panel layout (occupancy grid + point cloud) and a full-map-only view.
 
 ### 4. Vision
 
@@ -86,3 +86,7 @@ To avoid overloading the Raspberry Pi with heavy algorithms, the SLAM map genera
 | USART0 RX | Peripheral Interrupt | Bare-metal serial receive | `USART0_RX_vect` ISR enqueues bytes into circular `rx_buf` |
 | USART0 UDRE | Peripheral Interrupt | Bare-metal serial transmit | `USART0_UDRE_vect` ISR dequeues bytes from circular `tx_buf`; auto-disables when empty |
 | Timers 1, 3, 4 | Hardware Timers | AFMotor library (motor PWM) | Reserved by the Adafruit Motor Shield v1 library for DC motor speed control; not available for user code |
+
+## Diagrams
+
+The `code1/diagrams/` directory contains PlantUML sequence diagrams (`.puml`) and their rendered PNG outputs for each major subsystem: camera, color sensor, E-Stop, LiDAR, motor, robot arm, and the overall software architecture.
