@@ -50,8 +50,8 @@ _ARM_MAX_PULSE_US     = 2400   # servo max pulse width (sync with .ino)
 _MOTOR_SPEED_DEFAULT  = 200    # initial motor speed (0-255)
 SPEED_STEP            = 25     # how much +/- changes the speed
 RAW_MOVE_MS           = 100    # duration per keypress in raw drive mode
-COLOR_SENSOR_INTERVAL = 5.0    # seconds between auto colour requests
-MAX_CAMERA_FRAMES     = 300     # frames before further captures are refused
+COLOR_SENSOR_INTERVAL = 2.0    # seconds between auto colour requests
+MAX_CAMERA_FRAMES     = 15     # frames before further captures are refused
 
 _ser = None
 
