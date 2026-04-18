@@ -1,25 +1,27 @@
 @startuml arch_system
 skinparam backgroundColor white
 skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 11
 skinparam ArrowColor #444444
-skinparam ArrowFontColor #666666
+skinparam ArrowFontColor #555555
+skinparam ArrowFontSize 10
 skinparam linetype ortho
-skinparam nodesep 50
-skinparam ranksep 55
+skinparam nodesep 60
+skinparam ranksep 70
 skinparam padding 8
+skinparam roundCorner 6
+skinparam shadowing false
 
 skinparam rectangle {
   BackgroundColor #fce8e8
   BorderColor #cc6666
   FontColor #222222
 }
-
 skinparam node {
   BackgroundColor #fff7e0
   BorderColor #b58900
   FontColor #222222
 }
-
 skinparam component {
   BackgroundColor #ffffff
   BorderColor #888888
@@ -29,127 +31,89 @@ skinparam component {
 
 title System Architecture
 
-' ==================== Peripherals attached to Arduino ====================
-node "<<device>>\n8x AA Batteries" as batt
-node "<<device>>\nServo Arm\nBase / Shoulder / Elbow / Gripper" as servo
-node "<<device>>\nAFMotor Shield\n(L293D, 4x DC motors)" as motors
-node "<<device>>\nColour Sensor\nTCS3200" as color_sensor
-node "<<device>>\nE-Stop Button" as estop_btn
-
-' ==================== Arduino Mega (ATMega2560) ====================
-rectangle "<<device>> ATMega2560" as arduino_box #fce8e8 {
-
-  rectangle "Controls Algorithm" as ctrl_grp #ffe0e0 {
-    component "Servo Control\n«Timer 5 PWM, 20 ms»" as ctrl_servo
-    component "Motor Control\n«robotlib.ino, AFMotor»" as ctrl_motor
+' ===== Arduino =====
+rectangle "<<device>> ATMega2560 (firmware)" as arduino #fce8e8 {
+  rectangle "Controls" as ctrl #ffe0e0 {
+    component "Servo Ctrl\n«Timer 5 PWM, 20 ms»" as cs
+    component "Motor Ctrl\n«robotlib.ino»" as cm
   }
-
-  rectangle "Sensor Algorithm" as sens_grp #ffe0e0 {
-    component "Colour Detection\n«Timer 2 CTC, 100 us»" as sens_color
-    component "E-Stop Handler\n«INT1 ISR, any-edge»" as sens_estop
+  rectangle "Sensors" as sens #ffe0e0 {
+    component "Colour\n«Timer 2 CTC, 100 us»" as sc
+    component "E-Stop\n«INT1 ISR»" as se
   }
-
-  rectangle "Communications Protocol\n«packets.h»" as comms_grp #ffe0e0 {
-    component "Packet Handler" as a_handler
-    component "Packet Serialiser\n«TPacket + XOR»" as a_serial
-    component "USART0 Driver\n«ISR TX/RX, MAGIC 0xDEAD»" as a_uart
+  rectangle "Comms (packets.h)" as ac #ffe0e0 {
+    component "Handler +\nSerialiser" as ah
+    component "USART0\n«ISR, MAGIC 0xDEAD»" as au
+    ah -down- au
   }
 }
+together {
+  node "8x AA\nBatt" as batt
+  node "Servo Arm\n4-DOF" as sv
+  node "DC Motors\n4x L293D" as mt
+  node "TCS3200" as tcs
+  node "E-Stop btn" as eb
+}
+batt -down-> arduino
+cs -up-> sv
+cm -up-> mt
+tcs -down-> sc
+eb -down-> se
 
-batt -down-> arduino_box : 5 V regulated
-ctrl_servo -right-> servo : PWM
-ctrl_motor -right-> motors : PWM
-color_sensor -left-> sens_color : freq pulses
-estop_btn -left-> sens_estop : INT1 (PD1)
-
-a_handler -down-> a_serial
-a_serial -down-> a_uart
-
-' ==================== Raspberry Pi (hub) ====================
-node "<<device>>\nPower Bank" as pwrbank
-node "<<device>>\nRPLidar A1M8" as lidar_dev
-node "<<device>>\nPi Camera\n«CSI»" as picam
-
-rectangle "<<device>> Raspberry Pi (mango)" as pi_box #d8eaf8 {
-
-  rectangle "pi_sensor.py — Pi-side hub" as hub_grp #cfe2f5 {
-    component "CLI / Operator Loop\n«WASD, arm, color, camera»" as pi_cli
-    component "Serial Bridge\n«USB serial @ 9600»" as pi_serial
-    component "Camera Wrapper\n«alex_camera.py»\n«ASCII 80x44»" as pi_cam
-    component "Color State Manager" as pi_color
+' ===== Raspberry Pi =====
+rectangle "<<device>> Raspberry Pi (mango) — Python" as pi #d8eaf8 {
+  rectangle "pi_sensor.py — hub" as hub #cfe2f5 {
+    component "CLI / Loop\n«WASD, arm, color, cam»" as cli
+    component "Serial Bridge\n«USB @9600»" as sb
+    component "alex_camera.py\n«ASCII 80x44, gated»" as cam
+    cli -down- sb
+    cli -down- cam
   }
-
-  rectangle "TLS Relay" as relay_grp #cfe2f5 {
-    component "relay.py\n«TLS TCP :65432»\n«TLS 1.2 min, server.crt»" as pi_relay
-    component "net_utils.py\n«4-byte length-prefix framing»" as pi_net
+  rectangle "TLS Relay (in-process)" as relay #cfe2f5 {
+    component "relay.py\n«TLS TCP :65432, TLS 1.2»" as rl
+    component "net_utils.py\n«4-byte length prefix»" as nu
+    rl -down- nu
   }
-
-  rectangle "LiDAR / SLAM Pipeline" as lidar_grp #cfe2f5 {
-    component "lidar_forwarder.py\n«JSON scans @ TCP :5002»" as pi_fwd
-    component "slam/lidar.py\n«resample to 360 bins»" as pi_lidar
-    component "lidar/alex_lidar.py\n«PyRPLidar wrapper»" as pi_alex_lidar
-    component "slam/settings.py" as pi_settings
+  rectangle "LiDAR / SLAM" as lp #cfe2f5 {
+    component "alex_lidar.py\n«PyRPLidar»" as al
+    component "slam/lidar.py\n«resample 360 bins»" as sl
+    component "lidar_forwarder.py\n«JSON @ TCP :5002»" as lf
+    al -down- sl
+    sl -down- lf
   }
+  component "packets.py\n«TPacket consts»" as pp
+  cli -right- rl
+  rl -up- pp
+}
+together {
+  node "Power\nBank" as pb
+  node "RPLidar\nA1M8" as rpl
+  node "Pi Camera\n(CSI)" as pc
+}
+pb -down-> pi
+pc -down-> cam
+rpl -down-> al
+au <-right-> sb : USB UART\n«TPacket»
 
-  component "packets.py\n«shared TPacket constants»" as pi_packets
+' ===== Thin clients =====
+rectangle "SLAM Visualiser" as sv2 #e8f8e8 {
+  component "slam_client.py\n«TCP :5002»" as scm
+  component "BreezySLAM (RMHC)\n+ matplotlib" as ss
+  scm -down- ss
+}
+rectangle "Motion Operator" as mc #e8f8e8 {
+  component "SSH → Pi\nruns pi_sensor.py" as ms
+  component "Terminal\n«ASCII cam + CLI»" as mt2
+  ms -down- mt2
+}
+rectangle "Arm Operator / Supervisor" as ac2 #e8f8e8 {
+  component "second_terminal.py\n«TLS TCP client»" as st
+  component "net_utils.py +\npackets.py" as sn
+  st -down- sn
 }
 
-pwrbank -down-> pi_box : 5 V USB
-picam -down-> pi_cam : CSI ribbon
-lidar_dev -down-> pi_alex_lidar : USB serial
-
-pi_cli -down-> pi_serial
-pi_cli -down-> pi_cam
-pi_cli -down-> pi_color
-pi_cli -right-> pi_relay : embed (in-process)
-
-pi_relay -down-> pi_net
-pi_relay -up-> pi_packets
-
-pi_alex_lidar -down-> pi_lidar
-pi_lidar -down-> pi_fwd
-pi_lidar -down-> pi_settings
-pi_fwd -down-> pi_settings
-
-' Arduino <-> Pi serial link
-a_uart <-right-> pi_serial : USB UART\n«TPacket frames»
-
-' ==================== Thin clients ====================
-rectangle "<<device>> Thin Client — Motion Operator" as motion_client #e8f8e8 {
-  component "SSH session into Pi\n«runs pi_sensor.py»" as motion_ssh
-  component "Terminal\n«ASCII camera + CLI»" as motion_term
-  motion_ssh -down-> motion_term
-}
-
-rectangle "<<device>> Thin Client — Arm Operator / Supervisor" as arm_client #e8f8e8 {
-  component "second_terminal.py\n«TLS TCP client»" as st_main
-  component "net_utils.py\n«length-prefix framing»" as st_net
-  component "packets.py\n«TPacket constants»" as st_packets
-  st_main -down-> st_net
-  st_main -down-> st_packets
-}
-
-rectangle "<<device>> Thin Client — SLAM Visualiser" as slam_client_box #e8f8e8 {
-  component "slam_client.py\n«TCP :5002»" as sc_main
-  component "BreezySLAM\n«RMHC_SLAM»" as sc_slam
-  component "matplotlib\n«dual / full map view»" as sc_ui
-  sc_main -down-> sc_slam
-  sc_slam -down-> sc_ui
-}
-
-' Pi <-> clients
-pi_box <-up- motion_ssh : SSH
-pi_relay <-right-> st_main : TLS TCP :65432\n«encrypted TPacket + length prefix»
-pi_fwd -right-> sc_main : TCP :5002\n«JSON 360-bin scans»
-
-legend bottom
-  | Colour | Meaning |
-  | <#fce8e8> | Arduino (firmware) |
-  | <#d8eaf8> | Raspberry Pi (Python) |
-  | <#e8f8e8> | Thin client (operator side) |
-  | <#fff7e0> | Hardware device |
-  Encryption: Pi <-> Arm/Supervisor terminal uses TLS 1.2 (cert: certs/server.crt, hostname 'mango').
-  Lidar telemetry stream (TCP :5002) is unencrypted by design (one-way scan data, LAN-local).
-endlegend
+lf -right-> scm : TCP :5002 (plaintext)\n«JSON 360-bin scans»
+pi <-right- ms : SSH
+rl <-right-> st : TLS TCP :65432\n«encrypted TPacket»
 
 @enduml
