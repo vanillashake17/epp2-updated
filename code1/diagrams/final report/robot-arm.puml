@@ -44,10 +44,10 @@ pi --> op : "Arm status..."
 deactivate pi
 
 note over op, servo
-  Joint mapping:
-  rb → Base   rs → Shoulder
-  re → Elbow  rg → Gripper
-  rv → Arm speed   rh → Home
+  Command format:
+  B/E/S/G<angle>  or  V<speed>  or  H
+  (Base / Elbow / Shoulder / Gripper,
+   V = Arm speed, H = Home)
 end note
 
 @enduml
