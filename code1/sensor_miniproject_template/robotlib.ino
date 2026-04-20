@@ -1,6 +1,6 @@
 #include <AFMotor.h>
 
-typedef enum dir  // direction values
+typedef enum dir
 {
 	STOP,
 	GO,
@@ -9,7 +9,6 @@ typedef enum dir  // direction values
 	CW
 } dir;
 
-// Motor control
 #define FRONT_LEFT   4 // M4 on the driver shield
 #define FRONT_RIGHT  1 // M1 on the driver shield
 #define BACK_LEFT    3 // M3 on the driver shield
@@ -34,23 +33,21 @@ void move(int speed, int direction)
 			motorFL.run(BACKWARD);
 			motorFR.run(BACKWARD);
 			motorBL.run(FORWARD);
-			motorBR.run(FORWARD); 
+			motorBR.run(FORWARD);
 			break;
 		case GO:
 			motorFL.run(FORWARD);
 			motorFR.run(FORWARD);
 			motorBL.run(BACKWARD);
-			motorBR.run(BACKWARD); 
+			motorBR.run(BACKWARD);
 			break;
 		case CW:
-			// Turn right: left wheels forward, right wheels backward
 			motorFL.run(FORWARD);
 			motorFR.run(FORWARD);
 			motorBL.run(FORWARD);
 			motorBR.run(FORWARD);
 			break;
 		case CCW:
-			// Turn left: left wheels backward, right wheels forward
 			motorFL.run(BACKWARD);
 			motorFR.run(BACKWARD);
 			motorBL.run(BACKWARD);
@@ -61,7 +58,7 @@ void move(int speed, int direction)
 			motorFL.run(RELEASE);
 			motorFR.run(RELEASE);
 			motorBL.run(RELEASE);
-			motorBR.run(RELEASE); 
+			motorBR.run(RELEASE);
 	}
 }
 
@@ -89,4 +86,3 @@ void stop()
 {
 	move(0, STOP);
 }
-

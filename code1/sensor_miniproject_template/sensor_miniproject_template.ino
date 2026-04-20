@@ -1,23 +1,3 @@
-/*
- * sensor_miniproject_template.ino
- * Studio 13: Sensor Mini-Project
- *
- * This sketch is split across three files in this folder:
- *
- *   packets.h        - TPacket protocol: enums, struct, framing constants.
- *                      Must stay in sync with pi_sensor.py.
- *
- *   serial_driver.h  - Transport layer.  Set USE_BAREMETAL_SERIAL to 0
- *                      (default) for the Arduino Serial path that works
- *                      immediately, or to 1 to use the bare-metal USART
- *                      driver (Activity 1).  Also contains the
- *                      sendFrame / receiveFrame framing code.
- *
- *   sensor_miniproject_template.ino  (this file)
- *                    - Application logic: packet helpers, E-Stop state
- *                      machine, color sensor, setup(), and loop().
- */
-
 #include "packets.h"
 #include "serial_driver.h"
 #include <avr/interrupt.h>
@@ -30,7 +10,7 @@
 
 #define MOVE_DURATION_MS 2000  // motor forward/backward duration
 #define TURN_DURATION_MS 2000  // motor turn duration
-#define THRESHOLD        20    // debounce threshold (20 x 100us = 2 ms)
+#define THRESHOLD 20    // debounce threshold (20 x 100us = 2 ms)
 
 #define S0         (1 << PA0)  // Arduino D22
 #define S1         (1 << PA1)  // Arduino D23
@@ -73,13 +53,9 @@
 #define TICKS_PER_PERIOD 50  // lerp speed: ticks per 20ms period per servo
 
 // =============================================================
-// Packet helpers (pre-implemented for you)
+// Packet helpers
 // =============================================================
 
-/*
- * Build a zero-initialised TPacket, set packetType = PACKET_TYPE_RESPONSE,
- * command = resp, and params[0] = param.  Then call sendFrame().
- */
 static void sendResponse(TResponseType resp, uint32_t param) {
 	TPacket pkt;
 	memset(&pkt, 0, sizeof(pkt));
@@ -89,9 +65,6 @@ static void sendResponse(TResponseType resp, uint32_t param) {
 	sendFrame(&pkt);
 }
 
-/*
- * Send a RESP_STATUS packet with the current state in params[0].
- */
 static void sendStatus(TState state) {
 	sendResponse(RESP_STATUS, (uint32_t)state);
 }
@@ -104,58 +77,12 @@ volatile TState buttonState = STATE_RUNNING;
 volatile bool stateChanged = false;
 volatile bool _pressedWhileStopped = false;
 
-/*
- * TODO (Activity 1): Implement the E-Stop ISR.
- *
- * Fire on any logical change on the button pin.
- * State machine (see handout diagram):
- *   RUNNING + press (pin HIGH)  ->  STOPPED, set stateChanged = true
- *   STOPPED + release (pin LOW) ->  RUNNING, set stateChanged = true
- *
- * Debounce the button.  You will also need to enable this interrupt
- * in setup() -- check the ATMega2560 datasheet for the correct
- * registers for your chosen pin.
- */
-
 // =============================================================
 // Color sensor (TCS3200)
 // =============================================================
 
 volatile unsigned long _timerTicks = 0;
 volatile unsigned long _lastTime = 0;
-
-/*
- * TODO (Activity 2): Implement the color sensor.
- *
- * Wire the TCS3200 to the Arduino Mega and configure the output pins
- * (S0, S1, S2, S3) and the frequency output pin.
- *
- * Use 20% output frequency scaling (S0=HIGH, S1=LOW).  This is the
- * required standardised setting; it gives a convenient measurement range and
- * ensures all implementations report the same physical quantity.
- *
- * Use a timer to count rising edges on the sensor output over a fixed
- * window (e.g. 100 ms) for each color channel (red, green, blue).
- * Convert the edge count to hertz before sending:
- *   frequency_Hz = edge_count / measurement_window_s
- * For a 100 ms window: frequency_Hz = edge_count * 10.
- *
- * Implement a function that measures all three channels and stores the
- * frequency in Hz in three variables.
- *
- * Define your own command and response types in packets.h (and matching
- * constants in pi_sensor.py), then handle the command in handleCommand()
- * and send back the channel frequencies (in Hz) in a response packet.
- *
- * Example skeleton:
- *
- *   static void readColorChannels(uint32_t *r, uint32_t *g, uint32_t *b) {
- *       // Set S2/S3 for each channel, measure edge count, multiply by 10
- *       *r = measureChannel(0, 0) * 10;  // red,   in Hz
- *       *g = measureChannel(1, 1) * 10;  // green, in Hz
- *       *b = measureChannel(0, 1) * 10;  // blue,  in Hz
- *   }
- */
 
 static uint32_t measureChannel(uint8_t s2, uint8_t s3) {
 
@@ -283,15 +210,14 @@ static void setupArmTimer() {
 	TCCR5A = 0;
 	TCCR5B = 0;
 	TCNT5 = 0;
-	OCR5A = 39999; // 20ms cycle
+	OCR5A = 39999; // 20ms cycle at prescaler 8 / 16MHz
 	OCR5B = 0;
-	TCCR5B |= (1 << WGM52); // CTC mode
-	TCCR5B |= (1 << CS51);  // prescaler 8
+	TCCR5B |= (1 << WGM52);
+	TCCR5B |= (1 << CS51);
 	TIMSK5 |= (1 << OCIE5A) | (1 << OCIE5B);
 	sei();
 }
 
-// called every 20ms from COMPA — lerp each servo one step toward target
 static void lerpTicks() {
 	for (int i = 0; i < 4; i++) {
 		if (arm_curr_ticks[i] < arm_target_ticks[i]) {
@@ -308,10 +234,10 @@ static void lerpTicks() {
 	}
 }
 
-// 20ms period — lerp step (stage reset is handled inside COMPB case 7)
 ISR(TIMER5_COMPA_vect) { lerpTicks(); }
 
-// staggered servo pulses
+// Staggered servo pulses: stage 0-7 alternate rise/fall for each of the four
+// servos at their CHECKPOINT offsets within the 20ms COMPA period.
 ISR(TIMER5_COMPB_vect) {
 	switch (arm_stage) {
 		case 0:
@@ -355,16 +281,6 @@ ISR(TIMER5_COMPB_vect) {
 // Command handler
 // =============================================================
 
-/*
- * Dispatch incoming commands from the Pi.
- *
- * COMMAND_ESTOP is pre-implemented: it sets the Arduino to STATE_STOPPED
- * and sends back RESP_OK followed by a RESP_STATUS update.
- *
- * TODO (Activity 2): add a case for your color sensor command.
- *   Call your color-reading function, then send a response packet with
- *   the channel frequencies in Hz.
- */
 static void handleCommand(const TPacket *cmd) {
 	if (cmd->packetType != PACKET_TYPE_COMMAND)
 		return;
@@ -386,8 +302,6 @@ static void handleCommand(const TPacket *cmd) {
 			}
 			sendStatus(STATE_STOPPED);
 			break;
-
-			// ---------------- COLOR SENSOR COMMAND ----------------
 
 		case COMMAND_COLOR: {
 
@@ -500,8 +414,8 @@ static void handleCommand(const TPacket *cmd) {
 					  break;
 				  }
 
-	} // end switch
-} // end handleCommand
+	}
+}
 
 // =============================================================
 // Arduino setup() and loop()
@@ -515,17 +429,16 @@ void setup() {
 	Serial.begin(9600);
 #endif
 
-	// ----------- COLOR SENSOR PIN SETUP -----------
-	DDRA |= S0 | S1 | S2 | S3; // outputs
-	DDRA &= ~SENSOR_OUT;       // input
-	DDRD &= ~(1 << PD1);       // input (button pin)
+	DDRA |= S0 | S1 | S2 | S3;
+	DDRA &= ~SENSOR_OUT;
+	DDRD &= ~(1 << PD1);
 
-	PORTA |= S0; // S0=HIGH, S1=LOW -> 20% frequency scaling
+	PORTA |= S0; // S0=HIGH, S1=LOW -> 20% frequency scaling (TCS3200)
 	PORTA &= ~S1;
 	setupTimer();
 	startTimer();
-	EICRA |= (1 << ISC10); // trigger on any logical change
-	EIMSK |= (1 << INT1);  // enable external interrupt 1
+	EICRA |= (1 << ISC10);
+	EIMSK |= (1 << INT1);
 
 	setupArmTimer();
 
@@ -545,5 +458,4 @@ void loop() {
 	if (receiveFrame(&incoming)) {
 		handleCommand(&incoming);
 	}
-	// updateArmMovement() removed — lerp now runs from COMPA ISR
 }

@@ -1,18 +1,12 @@
 /*
  * packets.h
- * Studio 13: Sensor Mini-Project
  *
- * TPacket protocol: enums, struct, and framing constants.
- * This file must be kept in sync with the constants in pi_sensor.py.
+ * TPacket protocol definitions. Must stay in sync with pi_sensor.py.
  */
 
 #pragma once
 
 #include <stdint.h>
-
-// =============================================================
-// TPacket protocol
-// =============================================================
 
 typedef enum {
 	PACKET_TYPE_COMMAND = 0,
@@ -46,10 +40,6 @@ typedef struct {
 	char data[32];
 	uint32_t params[16];
 } TPacket;
-
-// =============================================================
-// Framing constants
-// =============================================================
 
 #define MAGIC_HI 0xDE
 #define MAGIC_LO 0xAD
