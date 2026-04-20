@@ -53,6 +53,18 @@
 #define TICKS_PER_PERIOD 50  // lerp speed: ticks per 20ms period per servo
 
 // =============================================================
+// Shared state (defined here so it is visible to every .ino in
+// this folder via Arduino's concatenated translation unit).
+//   arm.ino         writes arm_target_ticks
+//   estop.ino       writes buttonState and stateChanged
+//   color_sensor.ino owns _timerTicks
+// =============================================================
+
+volatile TState buttonState = STATE_RUNNING;
+volatile bool stateChanged = false;
+volatile int arm_target_ticks[4];
+
+// =============================================================
 // Packet helpers
 // =============================================================
 
@@ -67,214 +79,6 @@ static void sendResponse(TResponseType resp, uint32_t param) {
 
 static void sendStatus(TState state) {
 	sendResponse(RESP_STATUS, (uint32_t)state);
-}
-
-// =============================================================
-// E-Stop state machine
-// =============================================================
-
-volatile TState buttonState = STATE_RUNNING;
-volatile bool stateChanged = false;
-volatile bool _pressedWhileStopped = false;
-
-// =============================================================
-// Color sensor (TCS3200)
-// =============================================================
-
-volatile unsigned long _timerTicks = 0;
-volatile unsigned long _lastTime = 0;
-
-static uint32_t measureChannel(uint8_t s2, uint8_t s3) {
-
-	if (s2)
-		PORTA |= S2;
-	else
-		PORTA &= ~S2;
-	if (s3)
-		PORTA |= S3;
-	else
-		PORTA &= ~S3;
-
-	uint32_t count = 0;
-	unsigned long start = _timerTicks;
-
-	while ((_timerTicks - start) < 1000) {
-		if (PINA & SENSOR_OUT) {
-			count++;
-			while (PINA & SENSOR_OUT);
-		}
-	}
-
-	return count;
-}
-
-static void readColorChannels(uint32_t *r, uint32_t *g, uint32_t *b) {
-	*r = measureChannel(0, 0) * 10;
-	*g = measureChannel(1, 1) * 10;
-	*b = measureChannel(0, 1) * 10;
-}
-
-static void setupTimer() {
-	cli();
-	TCCR2A = (1 << WGM21); // CTC mode
-	TCCR2B = 0;            // no clock yet
-	OCR2A = 199;
-	TIMSK2 = (1 << OCIE2A);
-	TCNT2 = 0;
-	sei();
-}
-
-static void startTimer() {
-	TCCR2B |= (1 << CS21); // prescaler 8 → START TIMER
-}
-
-ISR(TIMER2_COMPA_vect) { _timerTicks++; }
-
-ISR(INT1_vect) {
-	unsigned long now = _timerTicks;
-
-	if ((now - _lastTime) > THRESHOLD) {
-		bool pressed = !(PIND & (1 << PD1)); // LOGIC low button
-
-		if (buttonState == STATE_RUNNING && pressed) {
-			buttonState = STATE_STOPPED;
-			stateChanged = true;
-			_pressedWhileStopped = false;
-		} else if (buttonState == STATE_STOPPED && pressed) {
-			// STOPPED + press -> stay STOPPED, but mark that a press occurred
-			_pressedWhileStopped = true;
-		} else if (buttonState == STATE_STOPPED && !pressed &&
-				_pressedWhileStopped) {
-			buttonState = STATE_RUNNING;
-			stateChanged = true;
-			_pressedWhileStopped = false;
-		}
-
-		_lastTime = now;
-	}
-}
-
-// =============================================================
-// Robot arm (Timer 5 servo driver)
-// =============================================================
-
-volatile int arm_curr_ticks[4];
-volatile int arm_target_ticks[4];
-volatile int arm_stage = 0;
-
-static int constrainAngle(int idx, int angle) {
-	switch (idx) {
-		case BASE_IDX:
-			return constrain(angle, BASE_MIN, BASE_MAX);
-		case SHLD_IDX:
-			return constrain(angle, SHLD_MIN, SHLD_MAX);
-		case ELBW_IDX:
-			return constrain(angle, ELBW_MIN, ELBW_MAX);
-		case GRIP_IDX:
-			return constrain(angle, GRIP_MIN, GRIP_MAX);
-		default:
-			return constrain(angle, 0, 180);
-	}
-}
-
-static int angleToPulse(int angle) {
-	int us = map(angle, 0, 180, MIN_PULSE, MAX_PULSE);
-	return us * 2; // 0.5us per tick at prescaler 8 / 16MHz
-}
-
-// set target for one servo (degrees) — converts to ticks once here
-static void setArmTarget(int idx, int angle) {
-	int clamped = constrainAngle(idx, angle);
-	arm_target_ticks[idx] = angleToPulse(clamped);
-}
-
-static void homeArm() {
-	setArmTarget(BASE_IDX, BASE_HOME);
-	setArmTarget(SHLD_IDX, SHLD_HOME);
-	setArmTarget(ELBW_IDX, ELBW_HOME);
-	setArmTarget(GRIP_IDX, GRIP_HOME);
-}
-
-static void setupArmTimer() {
-	DDRC |= 0x17; // PC0-PC2, PC4 as outputs
-	PORTC &= ~0x17;
-
-	// initialise current ticks to home position
-	for (int i = 0; i < 4; i++) {
-		arm_curr_ticks[i] = angleToPulse(constrainAngle(
-					i, (int[]){BASE_HOME, SHLD_HOME, ELBW_HOME, GRIP_HOME}[i]));
-		arm_target_ticks[i] = arm_curr_ticks[i];
-	}
-
-	cli();
-	TCCR5A = 0;
-	TCCR5B = 0;
-	TCNT5 = 0;
-	OCR5A = 39999; // 20ms cycle at prescaler 8 / 16MHz
-	OCR5B = 0;
-	TCCR5B |= (1 << WGM52);
-	TCCR5B |= (1 << CS51);
-	TIMSK5 |= (1 << OCIE5A) | (1 << OCIE5B);
-	sei();
-}
-
-static void lerpTicks() {
-	for (int i = 0; i < 4; i++) {
-		if (arm_curr_ticks[i] < arm_target_ticks[i]) {
-			if (arm_curr_ticks[i] + TICKS_PER_PERIOD > arm_target_ticks[i])
-				arm_curr_ticks[i] = arm_target_ticks[i];
-			else
-				arm_curr_ticks[i] += TICKS_PER_PERIOD;
-		} else {
-			if (arm_curr_ticks[i] - TICKS_PER_PERIOD < arm_target_ticks[i])
-				arm_curr_ticks[i] = arm_target_ticks[i];
-			else
-				arm_curr_ticks[i] -= TICKS_PER_PERIOD;
-		}
-	}
-}
-
-ISR(TIMER5_COMPA_vect) { lerpTicks(); }
-
-// Staggered servo pulses: stage 0-7 alternate rise/fall for each of the four
-// servos at their CHECKPOINT offsets within the 20ms COMPA period.
-ISR(TIMER5_COMPB_vect) {
-	switch (arm_stage) {
-		case 0:
-			PORTC |= (1 << BASE_PIN);
-			OCR5B += arm_curr_ticks[BASE_IDX];
-			break;
-		case 1:
-			PORTC &= ~(1 << BASE_PIN);
-			OCR5B = SHLD_CHECKPOINT;
-			break;
-		case 2:
-			PORTC |= (1 << SHLD_PIN);
-			OCR5B += arm_curr_ticks[SHLD_IDX];
-			break;
-		case 3:
-			PORTC &= ~(1 << SHLD_PIN);
-			OCR5B = ELBW_CHECKPOINT;
-			break;
-		case 4:
-			PORTC |= (1 << ELBW_PIN);
-			OCR5B += arm_curr_ticks[ELBW_IDX];
-			break;
-		case 5:
-			PORTC &= ~(1 << ELBW_PIN);
-			OCR5B = GRIP_CHECKPOINT;
-			break;
-		case 6:
-			PORTC |= (1 << GRIP_PIN);
-			OCR5B += arm_curr_ticks[GRIP_IDX];
-			break;
-		case 7:
-			PORTC &= ~(1 << GRIP_PIN);
-			OCR5B = BASE_CHECKPOINT;
-			arm_stage = -1;
-			break;
-	}
-	arm_stage++;
 }
 
 // =============================================================
