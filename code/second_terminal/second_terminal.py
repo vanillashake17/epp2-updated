@@ -16,18 +16,6 @@ Architecture
 Run pi_sensor.py FIRST (it starts the TCP server), then run this script.
 Both scripts run on the same Raspberry Pi.
 
-IMPORTANT: Update the TPacket constants below to match your pi_sensor.py.
----------------------------------------------------------------------------
-The packet constants (PACKET_TYPE_*, COMMAND_*, RESP_*, STATE_*, sizes) are
-duplicated here from pi_sensor.py.  They MUST stay in sync with your
-pi_sensor.py (and with the Arduino sketch).  Update them whenever you change
-your protocol.
-
-Tip: consider abstracting all TPacket constants into a shared file (e.g.
-packets.py) that both pi_sensor.py and second_terminal.py import, so there
-is only one place to update them.  You do not have to do this now, but it
-avoids hard-to-find bugs caused by constants getting out of sync.
-
 Commands
 --------
   e   Send a software E-Stop to the robot (same as pressing the button).
@@ -48,7 +36,7 @@ import struct
 import sys
 import time
 
-# Add parent directory (code1/) to path so we can import the shared packets module.
+# Add parent directory (code/) to path so we can import the shared packets module.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from packets import *
 

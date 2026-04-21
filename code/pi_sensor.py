@@ -277,7 +277,6 @@ def handleColorCommand():
 # ACTIVITY 3: CAMERA
 # ----------------------------------------------------------------
 
-# TODO (Activity 3): import the camera library provided (alex_camera.py).
 if CAMERA_ENABLED:
     import alex_camera
     _camera = alex_camera.cameraOpen()
@@ -285,12 +284,6 @@ _frames_remaining = MAX_CAMERA_FRAMES
 
 
 def handleCameraCommand():
-    """
-    TODO (Activity 3): capture and display a greyscale frame.
-
-    Gate on E-Stop state and the remaining frame count.
-    Use captureGreyscaleFrame() and renderGreyscaleFrame() from alex_camera.
-    """
     global _frames_remaining
 
     if not CAMERA_ENABLED:
@@ -549,7 +542,6 @@ if __name__ == '__main__':
     finally:
         if CAMERA_ENABLED:
             alex_camera.cameraClose(_camera)
-        # TODO Disconnect Lidar if used (unsure)
         relay.shutdown()
         closeSerial()
         

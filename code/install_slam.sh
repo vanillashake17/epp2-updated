@@ -2,7 +2,7 @@
 # install_slam.sh
 # Studio 16: Robot Integration
 #
-# Installs breezyslam and textual into the existing virtual environment.
+# Installs breezyslam into the existing virtual environment.
 # This script REQUIRES the env/ folder created by setup_environment.sh to
 # already be present.  Run it from the same directory as your pi_sensor.py.
 #
@@ -101,15 +101,6 @@ else
     echo "BreezySLAM installed successfully."
 fi
 
-if "$VENV_PYTHON" -c "import textual" &>/dev/null; then
-    echo "Textual is already installed."
-else
-    echo "Installing Textual..."
-    "$VENV_PYTHON" -m pip install textual
-    echo ''
-    echo "Textual installed successfully."
-fi
-
 echo ''
 echo '======================================='
 echo '= Done!                               ='
@@ -118,6 +109,7 @@ echo ''
 echo "Activate the environment in any new terminal with:"
 echo "  source env/bin/activate"
 echo ''
-echo "Then start the SLAM visualiser with:"
-echo "  cd slam"
-echo "  python3 slam.py"
+echo "Then stream scans from the Pi:"
+echo "  python3 slam/lidar_forwarder.py"
+echo "and on the desktop:"
+echo "  python3 slam/slam_client.py <PI_IP>"
