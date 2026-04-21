@@ -74,7 +74,7 @@ def closeSerial():
 
 # ----------------------------------------------------------------
 # TPACKET CONSTANTS
-# (must match sensor_miniproject_template.ino)
+# (must match alex_firmware.ino)
 # ----------------------------------------------------------------
 
 

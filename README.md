@@ -11,7 +11,7 @@ The architecture spans three physical systems: **Arduino** (Firmware), **Raspber
 The Raspberry Pi acts as the main hub, while the Arduino acts as the low-level hardware executor.
 
 - **`code/pi_sensor.py`**: The main coordinator script on the Raspberry Pi. It opens the serial port to the Arduino, parses movement commands (WASD / speed) from the primary operator, limits camera frame outputs, and manages hardware/software E-Stop states.
-- **`code/sensor_miniproject_template/sensor_miniproject_template.ino`**: The primary C++ firmware flashed to the Arduino. It uses ISR-driven circular buffers for non-blocking I/O to read serial commands, actuates motors and servos (`robotlib.ino`), reads the TCS3200 color sensor (Timer 2), and executes the physical hardware E-Stop (INT1).
+- **`code/alex_firmware/alex_firmware.ino`**: The primary C++ firmware flashed to the Arduino. It uses ISR-driven circular buffers for non-blocking I/O to read serial commands, actuates motors and servos (`robotlib.ino`), reads the TCS3200 color sensor (Timer 2), and executes the physical hardware E-Stop (INT1).
 - **`code/packets.py` & `packets.h`**: The shared protocol dictionaries across the system. They ensure that Python and C++ both agree on the exact 103-byte `TPacket` framing layout (MAGIC bytes -> TPacket -> XOR Checksum).
 
 ### 2. TLS Secure Teleoperation (Desktop <-> Raspberry Pi)
