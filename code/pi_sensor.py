@@ -345,32 +345,6 @@ def handleSpeedChange(delta):
     print(f"Motor speed set to {_motor_speed}")
 
 
-def handleArmCommand(line):
-    """Parse and send arm commands: rb/rs/re/rg <angle>, rv <delay>, rh (home)."""
-    parts = line.split()
-    cmd_char = parts[0]
-    char_map = {'rb': 'B', 'rs': 'S', 're': 'E', 'rg': 'G', 'rv': 'V', 'rh': 'H'}
-    arm_char = char_map[cmd_char]
-
-    if arm_char == 'H':
-        sendCommand(COMMAND_ARM, data=b'H')
-        print("Homing arm...")
-        return
-
-    if len(parts) < 2:
-        print(f"Usage: {cmd_char} <value>")
-        return
-    try:
-        val = int(parts[1])
-    except ValueError:
-        print(f"Invalid value: '{parts[1]}'")
-        return
-
-    sendCommand(COMMAND_ARM, data=arm_char.encode(), params=[val] + [0] * 15)
-    label = {'B': 'Base', 'S': 'Shoulder', 'E': 'Elbow', 'G': 'Gripper', 'V': 'Speed'}
-    print(f"Arm {label[arm_char]} -> {val}")
-
-
 def handleUserInput(line):
 
     if line == 'e':
@@ -407,9 +381,6 @@ def handleUserInput(line):
         print("Stopping robot...")
         sendCommand(COMMAND_MOVE, data=b'x', params=[0, 0] + [0] * 14)
 
-    elif line.split()[0] in ('rb', 'rs', 're', 'rg', 'rv', 'rh'):
-        handleArmCommand(line)
-
     elif line == '+':
         handleSpeedChange(SPEED_STEP)
 
@@ -417,7 +388,7 @@ def handleUserInput(line):
         handleSpeedChange(-SPEED_STEP)
 
     else:
-        print(f"Unknown input: '{line}'. Valid: e, t, n, c, p, w/s/a/d <ms>, x, +/-, rb/rs/re/rg/rv/rh")
+        print(f"Unknown input: '{line}'. Valid: e, t, n, c, p, w/s/a/d <ms>, x, +/-")
 
 
 def _processSerial():
@@ -497,9 +468,6 @@ def runCommandInterface():
     print("  x = Stop robot")
     print(f"  +/- = Speed up/down  (current: {_motor_speed})")
     print("  m = Normal input mode (line-based)")
-    print("  rb <0-175> = Base   rs <140-180> = Shoulder")
-    print("  re <0-180> = Elbow  rg <5-40> = Gripper")
-    print("  rv <1-999> = Arm speed (ms/step)  rh = Home arm")
     print("Press Ctrl+C to exit.\n")
 
     runRawDriveMode()
