@@ -229,7 +229,7 @@ def _handleInput(line: str, client: TCPClient):
     else:
         print(f"[second_terminal] Unknown: '{line}'.  "
               f"Valid: e (E-Stop)  n (toggle print)  "
-              f"b/s/e/g/vNNN (arm)  h (home arm)  q (quit)")
+              f"b/s/e/gNNN (arm angle)  vNNN (arm speed)  h (home arm)  q (quit)")
 
 
 # ---------------------------------------------------------------------------
@@ -255,12 +255,13 @@ def run():
 
     print("[second_terminal] Connected!")
     print("[second_terminal] Commands:  e = E-Stop  n = Toggle colour printing")
-    print("[second_terminal]           b/s/e/g/vNNN = arm  h = home arm  q = quit")
+    print("[second_terminal]           b/s/e/gNNN = arm angles  vNNN = arm speed  h = home arm  q = quit")
     print("[second_terminal] Servo limits:")
     print("  Base (b):     0 - 180")
     print("  Shoulder (s): 110 (up) - 180 (down)")
     print("  Elbow (e):    0 (down/in) - 180 (up/out)")
     print("  Gripper (g):  5 (open) - 35 (closed)")
+    print("  Speed (v):    1 - 400 ticks/period (default 50; larger = faster)")
     print("[second_terminal] Incoming robot packets will be printed below.\n")
 
     try:
