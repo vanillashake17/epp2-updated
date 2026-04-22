@@ -1,21 +1,24 @@
-@startuml arch_system
+@startuml System_Architecture_Diagram
+skinparam dpi 200
 skinparam backgroundColor white
 skinparam defaultFontName "Helvetica"
-skinparam defaultFontSize 11
+skinparam defaultFontSize 12
 skinparam ArrowColor #444444
 skinparam ArrowFontColor #555555
-skinparam ArrowFontSize 10
+skinparam ArrowFontSize 11
+skinparam ArrowThickness 1.2
 skinparam linetype ortho
-skinparam nodesep 60
-skinparam ranksep 70
+skinparam nodesep 45
+skinparam ranksep 55
 skinparam padding 8
-skinparam roundCorner 6
+skinparam roundCorner 8
 skinparam shadowing false
 
 skinparam rectangle {
   BackgroundColor #fce8e8
   BorderColor #cc6666
   FontColor #222222
+  FontStyle bold
 }
 skinparam node {
   BackgroundColor #fff7e0
@@ -26,94 +29,126 @@ skinparam component {
   BackgroundColor #ffffff
   BorderColor #888888
   FontColor #222222
+  FontStyle plain
   Style rectangle
 }
 
-title System Architecture
+title <b>System Architecture</b>
 
-' ===== Arduino =====
-rectangle "<<device>> ATMega2560 (firmware)" as arduino #fce8e8 {
+' ========================================================================
+' Top: peripherals (Arduino-side on left, Pi-side on right)
+' ========================================================================
+together {
+  node "8x AA\nBattery"        as batt
+  node "DC Motors\n(4x L293D)" as mt
+  node "Servo Arm\n(4-DOF)"    as sv
+  node "TCS3200\nColour"       as tcs
+  node "E-Stop\nButton"        as eb
+}
+
+together {
+  node "Power\nBank"      as pb
+  node "Pi Camera\n(CSI)" as pc
+  node "RPLidar\nA1M8"    as rpl
+}
+
+' ========================================================================
+' ATMega2560 (left of Pi) — sub-blocks stacked vertically
+' ========================================================================
+rectangle "<<device>>  ATMega2560 (Firmware)" as arduino #fce8e8 {
   rectangle "Controls" as ctrl #ffe0e0 {
-    component "Servo Ctrl\n«Timer 5 PWM, 20 ms»" as cs
-    component "Motor Ctrl\n«robotlib.ino»" as cm
+    component "Motor Ctrl\n«robotlib.ino»"        as cm
+    component "Servo Ctrl\n«Timer 5 PWM, 20 ms»"  as cs
+    cm -right- cs
   }
   rectangle "Sensors" as sens #ffe0e0 {
-    component "Colour\n«Timer 2 CTC, 100 us»" as sc
-    component "E-Stop\n«INT1 ISR»" as se
+    component "Colour Driver\n«Timer 2 CTC, 100 us»" as sc
+    component "E-Stop ISR\n«INT1»"                   as se
+    sc -right- se
   }
   rectangle "Comms (packets.h)" as ac #ffe0e0 {
-    component "Handler +\nSerialiser" as ah
-    component "USART0\n«ISR, MAGIC 0xDEAD»" as au
-    ah -down- au
+    component "Handler +\nSerialiser"           as ah
+    component "USART0\n«ISR, MAGIC 0xDEAD»"     as au
+    ah -right- au
   }
+  ctrl -down- sens
+  sens -down- ac
 }
-together {
-  node "8x AA\nBatt" as batt
-  node "Servo Arm\n4-DOF" as sv
-  node "DC Motors\n4x L293D" as mt
-  node "TCS3200" as tcs
-  node "E-Stop btn" as eb
-}
-batt -down-> arduino
-cs -up-> sv
-cm -up-> mt
-tcs -down-> sc
-eb -down-> se
 
-' ===== Raspberry Pi =====
-rectangle "<<device>> Raspberry Pi (mango) — Python" as pi #d8eaf8 {
-  rectangle "pi_sensor.py — hub" as hub #cfe2f5 {
-    component "CLI / Loop\n«WASD, arm, color, cam»" as cli
-    component "Serial Bridge\n«USB @9600»" as sb
-    component "alex_camera.py\n«ASCII 80x44, gated»" as cam
-    cli -down- sb
-    cli -down- cam
+' ========================================================================
+' Raspberry Pi (right of Arduino) — sub-blocks stacked vertically
+' ========================================================================
+rectangle "<<device>>  Raspberry Pi (mango) — Python" as pi #d8eaf8 {
+  rectangle "pi_sensor.py — Hub" as hub #cfe2f5 {
+    component "Serial Bridge\n«USB @ 9600 bps»"        as sb
+    component "CLI / Loop\n«WASD, arm, color, cam»"    as cli
+    component "alex_camera.py\n«ASCII 80x44, gated»"   as cam
+    sb -right- cli
+    cli -right- cam
   }
   rectangle "TLS Relay (in-process)" as relay #cfe2f5 {
     component "relay.py\n«TLS TCP :65432, TLS 1.2»" as rl
     component "net_utils.py\n«4-byte length prefix»" as nu
-    rl -down- nu
+    component "packets.py\n«TPacket consts»"        as pp
+    rl -right- nu
+    nu -right- pp
   }
-  rectangle "LiDAR / SLAM" as lp #cfe2f5 {
-    component "alex_lidar.py\n«PyRPLidar»" as al
-    component "slam/lidar.py\n«resample 360 bins»" as sl
+  rectangle "LiDAR / SLAM Pipeline" as lp #cfe2f5 {
+    component "alex_lidar.py\n«PyRPLidar wrapper»"   as al
+    component "slam/lidar.py\n«resample 360 bins»"   as sl
     component "lidar_forwarder.py\n«JSON @ TCP :5002»" as lf
-    al -down- sl
-    sl -down- lf
+    al -right- sl
+    sl -right- lf
   }
-  component "packets.py\n«TPacket consts»" as pp
-  cli -right- rl
-  rl -up- pp
+  hub -down- relay
+  relay -down- lp
 }
+
+' Force Arduino LEFT of Pi
+arduino -[hidden]right- pi
+
+' ========================================================================
+' Bottom: network clients
+' ========================================================================
 together {
-  node "Power\nBank" as pb
-  node "RPLidar\nA1M8" as rpl
-  node "Pi Camera\n(CSI)" as pc
+  rectangle "Motion Operator" as mc #e8f8e8 {
+    component "SSH → Pi\nruns pi_sensor.py" as ms
+    component "Terminal\n«ASCII cam + CLI»" as mt2
+    ms -right- mt2
+  }
+  rectangle "Arm Operator / Supervisor" as ac2 #e8f8e8 {
+    component "second_terminal.py\n«TLS TCP client»" as st
+    component "net_utils.py +\npackets.py"            as sn
+    st -right- sn
+  }
+  rectangle "SLAM Visualiser" as svp #e8f8e8 {
+    component "slam_client.py\n«TCP :5002»" as scm
+    component "BreezySLAM (RMHC)\n+ matplotlib" as ss
+    scm -right- ss
+  }
 }
-pb -down-> pi
-pc -down-> cam
+
+' ========================================================================
+' Wiring
+' ========================================================================
+' Arduino peripherals -> Arduino subsystems
+batt -down-> arduino
+mt   -down-> cm
+sv   -down-> cs
+tcs  -down-> sc
+eb   -down-> se
+
+' Pi peripherals -> Pi subsystems
+pb  -down-> pi
+pc  -down-> cam
 rpl -down-> al
-au <-right-> sb : USB UART\n«TPacket»
 
-' ===== Thin clients =====
-rectangle "SLAM Visualiser" as sv2 #e8f8e8 {
-  component "slam_client.py\n«TCP :5002»" as scm
-  component "BreezySLAM (RMHC)\n+ matplotlib" as ss
-  scm -down- ss
-}
-rectangle "Motion Operator" as mc #e8f8e8 {
-  component "SSH → Pi\nruns pi_sensor.py" as ms
-  component "Terminal\n«ASCII cam + CLI»" as mt2
-  ms -down- mt2
-}
-rectangle "Arm Operator / Supervisor" as ac2 #e8f8e8 {
-  component "second_terminal.py\n«TLS TCP client»" as st
-  component "net_utils.py +\npackets.py" as sn
-  st -down- sn
-}
+' Arduino <-> Pi (USB serial bridge)
+au -right-> sb : USB UART «TPacket»
 
-lf -right-> scm : TCP :5002 (plaintext)\n«JSON 360-bin scans»
-pi <-right- ms : SSH
-rl <-right-> st : TLS TCP :65432\n«encrypted TPacket»
+' Pi -> network clients
+pi -down-> ms  : SSH
+rl -down-> st  : TLS TCP :65432\n«encrypted TPacket»
+lf -down-> scm : TCP :5002\n«JSON 360-bin scans»
 
 @enduml
