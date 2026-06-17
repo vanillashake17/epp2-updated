@@ -290,7 +290,7 @@ def handleCameraCommand():
         print("Camera not enabled.")
         return
 
-    if not isEstopActive(): # estop not active, capture and display max 10 images.
+    if not isEstopActive(): # estop not active, capture and display up to MAX_CAMERA_FRAMES images.
         if _frames_remaining > 0:
             newImage = alex_camera.captureGreyscaleFrame(
                 _camera,
@@ -387,8 +387,11 @@ def handleUserInput(line):
     elif line == '-':
         handleSpeedChange(-SPEED_STEP)
 
+    elif line == 'q':
+        raise KeyboardInterrupt
+
     else:
-        print(f"Unknown input: '{line}'. Valid: e, t, n, c, p, w/s/a/d <ms>, x, +/-")
+        print(f"Unknown input: '{line}'. Valid: e, t, n, c, p, w/s/a/d <ms>, x, +/-, q")
 
 
 def _processSerial():
@@ -406,8 +409,8 @@ def runRawDriveMode():
     """Raw drive mode: WASD keys move instantly, no Enter required."""
     print("\n-- RAW DRIVE MODE --")
     print("  WASD = drive    +/- = speed    e = E-Stop    x = stop")
-    print("  c = Colour    p = Camera    t = Auto colour (5s)")
-    print("  n = Toggle colour printing    m = Normal input mode\n")
+    print("  c = Colour    p = Camera    t = Auto colour (2s)")
+    print("  n = Toggle colour printing    m = Normal input mode    q = Quit\n")
 
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
@@ -452,6 +455,8 @@ def runRawDriveMode():
                 handleSpeedChange(SPEED_STEP)
             elif ch == '-':
                 handleSpeedChange(-SPEED_STEP)
+            elif ch == 'q':
+                raise KeyboardInterrupt
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
@@ -460,14 +465,14 @@ def runCommandInterface():
 
     print("Sensor interface ready. Commands:")
     print(f"  e = E-Stop    c = Color sensor {'(disabled)' if not COLOR_ENABLED else ''}")
-    print(f"  t = Auto colour (5s)    n = Toggle colour printing")
+    print(f"  t = Auto colour (2s)    n = Toggle colour printing")
     print(f"  p = Camera {'(disabled)' if not CAMERA_ENABLED else ''}")
     print("  w <ms> = Forward   s <ms> = Backward")
     print("  a <ms> = Turn left d <ms> = Turn right")
     print("  (duration in ms, default 2000. e.g. 'w 500')")
     print("  x = Stop robot")
     print(f"  +/- = Speed up/down  (current: {_motor_speed})")
-    print("  m = Normal input mode (line-based)")
+    print("  m = Normal input mode (line-based)    q = Quit")
     print("Press Ctrl+C to exit.\n")
 
     runRawDriveMode()

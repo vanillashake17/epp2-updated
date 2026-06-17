@@ -259,8 +259,8 @@ def run():
     print("[second_terminal] Servo limits:")
     print("  Base (b):     0 - 180")
     print("  Shoulder (s): 110 (up) - 180 (down)")
-    print("  Elbow (e):    0 (down/in) - 180 (up/out)")
-    print("  Gripper (g):  5 (open) - 35 (closed)")
+    print("  Elbow (e):    65 (down/in) - 180 (up/out)")
+    print("  Gripper (g):  5 (open) - 40 (closed)")
     print("  Speed (v):    1 - 400 ticks/period (default 50; larger = faster)")
     print("[second_terminal] Incoming robot packets will be printed below.\n")
 

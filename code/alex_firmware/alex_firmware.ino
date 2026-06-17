@@ -54,7 +54,7 @@ volatile int TICKS_PER_PERIOD = 50;  // lerp speed: ticks per 20ms period per se
 
 // =============================================================
 // Shared state (defined here so it is visible to every .ino in
-// this folder via Arduino's concatenated translation unit).
+// this folder).
 //   arm.ino         writes arm_target_ticks
 //   estop.ino       writes buttonState and stateChanged
 //   color_sensor.ino owns _timerTicks

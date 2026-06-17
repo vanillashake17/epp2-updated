@@ -28,7 +28,7 @@ LIDAR_BAUD = 115200
 SCAN_SIZE = 360
 
 # Readings beyond this distance (in mm) are treated as misses (no return).
-MAX_DISTANCE_MM = 5000
+MAX_DISTANCE_MM = 4000
 
 # Number of scans to skip at startup.  The LIDAR motor needs a few rotations
 # to reach full speed; early scans are noisier than steady-state scans.
