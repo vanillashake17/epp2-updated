@@ -7,7 +7,6 @@
 # Keep only these top-level folders
 !/Alex/
 !/code/
-!/code1/
 !/code2/
 
 
@@ -30,3 +29,4 @@
 
 .DS_Store
 !README.md
+!B03-1\ Final\ report.pdf

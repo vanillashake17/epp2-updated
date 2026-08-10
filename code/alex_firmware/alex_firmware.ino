@@ -50,11 +50,11 @@
 #define ELBW_CHECKPOINT 20000  // staggered checkpoint (timer ticks)
 #define GRIP_CHECKPOINT 30000  // staggered checkpoint (timer ticks)
 
-#define TICKS_PER_PERIOD 50  // lerp speed: ticks per 20ms period per servo
+volatile int TICKS_PER_PERIOD = 50;  // lerp speed: ticks per 20ms period per servo; tunable at runtime via COMMAND_ARM 'V'
 
 // =============================================================
 // Shared state (defined here so it is visible to every .ino in
-// this folder via Arduino's concatenated translation unit).
+// this folder).
 //   arm.ino         writes arm_target_ticks
 //   estop.ino       writes buttonState and stateChanged
 //   color_sensor.ino owns _timerTicks
@@ -203,6 +203,14 @@ static void handleCommand(const TPacket *cmd) {
 						  case 'H':
 							  homeArm();
 							  break;
+						  case 'V': {
+							  int clamped = constrain(val, 1, 400);
+							  uint8_t sreg = SREG;
+							  cli();
+							  TICKS_PER_PERIOD = clamped;
+							  SREG = sreg;
+							  break;
+						  }
 					  }
 
 					  TPacket pkt;

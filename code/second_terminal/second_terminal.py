@@ -16,18 +16,6 @@ Architecture
 Run pi_sensor.py FIRST (it starts the TCP server), then run this script.
 Both scripts run on the same Raspberry Pi.
 
-IMPORTANT: Update the TPacket constants below to match your pi_sensor.py.
----------------------------------------------------------------------------
-The packet constants (PACKET_TYPE_*, COMMAND_*, RESP_*, STATE_*, sizes) are
-duplicated here from pi_sensor.py.  They MUST stay in sync with your
-pi_sensor.py (and with the Arduino sketch).  Update them whenever you change
-your protocol.
-
-Tip: consider abstracting all TPacket constants into a shared file (e.g.
-packets.py) that both pi_sensor.py and second_terminal.py import, so there
-is only one place to update them.  You do not have to do this now, but it
-avoids hard-to-find bugs caused by constants getting out of sync.
-
 Commands
 --------
   e   Send a software E-Stop to the robot (same as pressing the button).
@@ -48,7 +36,7 @@ import struct
 import sys
 import time
 
-# Add parent directory (code1/) to path so we can import the shared packets module.
+# Add parent directory (code/) to path so we can import the shared packets module.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from packets import *
 
@@ -241,7 +229,7 @@ def _handleInput(line: str, client: TCPClient):
     else:
         print(f"[second_terminal] Unknown: '{line}'.  "
               f"Valid: e (E-Stop)  n (toggle print)  "
-              f"b/s/e/g/vNNN (arm)  h (home arm)  q (quit)")
+              f"b/s/e/gNNN (arm angle)  vNNN (arm speed)  h (home arm)  q (quit)")
 
 
 # ---------------------------------------------------------------------------
@@ -267,12 +255,13 @@ def run():
 
     print("[second_terminal] Connected!")
     print("[second_terminal] Commands:  e = E-Stop  n = Toggle colour printing")
-    print("[second_terminal]           b/s/e/g/vNNN = arm  h = home arm  q = quit")
+    print("[second_terminal]           b/s/e/gNNN = arm angles  vNNN = arm speed  h = home arm  q = quit")
     print("[second_terminal] Servo limits:")
     print("  Base (b):     0 - 180")
     print("  Shoulder (s): 110 (up) - 180 (down)")
-    print("  Elbow (e):    0 (down/in) - 180 (up/out)")
-    print("  Gripper (g):  5 (open) - 35 (closed)")
+    print("  Elbow (e):    65 (down/in) - 180 (up/out)")
+    print("  Gripper (g):  5 (open) - 40 (closed)")
+    print("  Speed (v):    1 - 400 ticks/period (default 50; larger = faster)")
     print("[second_terminal] Incoming robot packets will be printed below.\n")
 
     try:

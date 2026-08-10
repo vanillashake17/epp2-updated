@@ -13,20 +13,6 @@ The relay works in two directions:
   1. Packets from the Arduino are forwarded to second_terminal.py.
   2. Commands from second_terminal.py are relayed to the Arduino.
 
-Student tasks (Activity 3)
---------------------------
-  The relay functions below are already implemented.
-  Your main task is to update the TPacket constants in second_terminal.py
-  to match your pi_sensor.py and Arduino sketch.
-
-  Add these lines to pi_sensor.py (see the studio handout for context):
-
-    from second_terminal import relay
-    ...
-    relay.start()              # after openSerial() in main()
-    relay.onPacketReceived(packFrame(...))  # in the receive loop, after printPacket(pkt)
-    relay.checkSecondTerminal(_ser) # once per main loop iteration
-    relay.shutdown()           # in the finally block of main()
 """
 
 from .net_utils import TCPServer, sendTPacketFrame, recvTPacketFrame

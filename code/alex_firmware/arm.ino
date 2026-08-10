@@ -83,39 +83,14 @@ ISR(TIMER5_COMPA_vect) { lerpTicks(); }
 // servos at their CHECKPOINT offsets within the 20ms COMPA period.
 ISR(TIMER5_COMPB_vect) {
 	switch (arm_stage) {
-		case 0:
-			PORTC |= (1 << BASE_PIN);
-			OCR5B += arm_curr_ticks[BASE_IDX];
-			break;
-		case 1:
-			PORTC &= ~(1 << BASE_PIN);
-			OCR5B = SHLD_CHECKPOINT;
-			break;
-		case 2:
-			PORTC |= (1 << SHLD_PIN);
-			OCR5B += arm_curr_ticks[SHLD_IDX];
-			break;
-		case 3:
-			PORTC &= ~(1 << SHLD_PIN);
-			OCR5B = ELBW_CHECKPOINT;
-			break;
-		case 4:
-			PORTC |= (1 << ELBW_PIN);
-			OCR5B += arm_curr_ticks[ELBW_IDX];
-			break;
-		case 5:
-			PORTC &= ~(1 << ELBW_PIN);
-			OCR5B = GRIP_CHECKPOINT;
-			break;
-		case 6:
-			PORTC |= (1 << GRIP_PIN);
-			OCR5B += arm_curr_ticks[GRIP_IDX];
-			break;
-		case 7:
-			PORTC &= ~(1 << GRIP_PIN);
-			OCR5B = BASE_CHECKPOINT;
-			arm_stage = -1;
-			break;
+		case 0: PORTC |=  (1 << BASE_PIN); OCR5B += arm_curr_ticks[BASE_IDX]; break;
+		case 1: PORTC &= ~(1 << BASE_PIN); OCR5B  = SHLD_CHECKPOINT;          break;
+		case 2: PORTC |=  (1 << SHLD_PIN); OCR5B += arm_curr_ticks[SHLD_IDX]; break;
+		case 3: PORTC &= ~(1 << SHLD_PIN); OCR5B  = ELBW_CHECKPOINT;          break;
+		case 4: PORTC |=  (1 << ELBW_PIN); OCR5B += arm_curr_ticks[ELBW_IDX]; break;
+		case 5: PORTC &= ~(1 << ELBW_PIN); OCR5B  = GRIP_CHECKPOINT;          break;
+		case 6: PORTC |=  (1 << GRIP_PIN); OCR5B += arm_curr_ticks[GRIP_IDX]; break;
+		case 7: PORTC &= ~(1 << GRIP_PIN); OCR5B  = BASE_CHECKPOINT; arm_stage = -1; break;
 	}
 	arm_stage++;
 }
